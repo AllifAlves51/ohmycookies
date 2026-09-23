@@ -23,7 +23,18 @@ export function getCustomerCount(supabase: SupabaseClient, storeId: string) {
     .eq("store_id", storeId)
 }
 
+export type DashboardCustomer = { id: string; created_at: string }
+
+export function getDashboardCustomers(supabase: SupabaseClient, storeId: string) {
+  return supabase
+    .from("customers")
+    .select("id, created_at")
+    .eq("store_id", storeId)
+    .returns<DashboardCustomer[]>()
+}
+
 export type TopProductRow = {
+  product_id: string | null
   product_name: string
   quantity: number
 }
@@ -40,7 +51,7 @@ export async function getTopProducts(
 ) {
   const { data, error } = await supabase
     .from("order_items")
-    .select("product_name, quantity, orders!inner(store_id, status)")
+    .select("product_id, product_name, quantity, orders!inner(store_id, status)")
     .eq("orders.store_id", storeId)
     .neq("orders.status", "cancelled")
 
@@ -48,19 +59,22 @@ export async function getTopProducts(
     return { data: null as TopProductRow[] | null, error }
   }
 
-  const totals = new Map<string, number>()
+  const totals = new Map<string, { product_id: string | null; quantity: number }>()
   for (const row of data as unknown as {
+    product_id: string | null
     product_name: string
     quantity: number
   }[]) {
-    totals.set(
-      row.product_name,
-      (totals.get(row.product_name) ?? 0) + row.quantity,
-    )
+    const current = totals.get(row.product_name) ?? {
+      product_id: row.product_id,
+      quantity: 0,
+    }
+    current.quantity += row.quantity
+    totals.set(row.product_name, current)
   }
 
   const sorted = Array.from(totals.entries())
-    .map(([product_name, quantity]) => ({ product_name, quantity }))
+    .map(([product_name, stats]) => ({ product_name, ...stats }))
     .sort((a, b) => b.quantity - a.quantity)
     .slice(0, limit)
 
@@ -133,6 +147,99 @@ export function computeDashboardDeltas(
       current.averageTicketCents,
       previous.averageTicketCents,
     ),
+  }
+}
+
+function dayBounds(daysAgo: number) {
+  const now = new Date()
+  const start = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo),
+  )
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
+  return { start, end }
+}
+
+function isWithin(iso: string, start: Date, end: Date) {
+  const t = new Date(iso).getTime()
+  return t >= start.getTime() && t < end.getTime()
+}
+
+export type TodayComparison = DashboardStats & {
+  revenueDeltaPct: number | null
+  orderCountDeltaPct: number | null
+  averageTicketDeltaPct: number | null
+}
+
+/** Today's headline stats vs. the same metrics yesterday — used by the
+ * dashboard's "hoje" stat cards, distinct from computeDashboardDeltas'
+ * trailing-window comparison. */
+export function computeTodayVsYesterday(
+  orders: DashboardOrder[],
+): TodayComparison {
+  const today = dayBounds(0)
+  const yesterday = dayBounds(1)
+
+  const todayStats = computeDashboardStats(
+    orders.filter((o) => isWithin(o.created_at, today.start, today.end)),
+  )
+  const yesterdayStats = computeDashboardStats(
+    orders.filter((o) => isWithin(o.created_at, yesterday.start, yesterday.end)),
+  )
+
+  return {
+    ...todayStats,
+    revenueDeltaPct: percentDelta(
+      todayStats.revenueCents,
+      yesterdayStats.revenueCents,
+    ),
+    orderCountDeltaPct: percentDelta(
+      todayStats.orderCount,
+      yesterdayStats.orderCount,
+    ),
+    averageTicketDeltaPct: percentDelta(
+      todayStats.averageTicketCents,
+      yesterdayStats.averageTicketCents,
+    ),
+  }
+}
+
+export function computeNewCustomersTodayVsYesterday(
+  customers: DashboardCustomer[],
+) {
+  const today = dayBounds(0)
+  const yesterday = dayBounds(1)
+
+  const todayCount = customers.filter((c) =>
+    isWithin(c.created_at, today.start, today.end),
+  ).length
+  const yesterdayCount = customers.filter((c) =>
+    isWithin(c.created_at, yesterday.start, yesterday.end),
+  ).length
+
+  return { todayCount, deltaPct: percentDelta(todayCount, yesterdayCount) }
+}
+
+export type OrdersInProgressCounts = {
+  preparing: number
+  outForDelivery: number
+  completed: number
+  cancelled: number
+}
+
+/** How many of *today's* orders currently sit in each of these statuses. */
+export function computeOrdersInProgressToday(
+  orders: DashboardOrder[],
+): OrdersInProgressCounts {
+  const { start, end } = dayBounds(0)
+  const todayOrders = orders.filter((o) => isWithin(o.created_at, start, end))
+
+  return {
+    preparing: todayOrders.filter((o) => o.status === "preparing").length,
+    outForDelivery: todayOrders.filter(
+      (o) => o.status === "out_for_delivery",
+    ).length,
+    completed: todayOrders.filter((o) => o.status === "completed").length,
+    cancelled: todayOrders.filter((o) => o.status === "cancelled").length,
   }
 }
 
