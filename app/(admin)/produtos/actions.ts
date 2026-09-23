@@ -128,6 +128,14 @@ export async function createProductAction(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" }
   }
 
+  const imageFile = formData.get("image")
+  if (
+    imageFile instanceof File &&
+    imageFile.size > 4 * 1024 * 1024
+  ) {
+    return { error: "A imagem deve ter no máximo 4MB" }
+  }
+
   const supabase = await createClient()
   const store = await requireOwnedStore(supabase)
 
@@ -188,6 +196,14 @@ export async function updateProductAction(
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" }
+  }
+
+  const imageFile = formData.get("image")
+  if (
+    imageFile instanceof File &&
+    imageFile.size > 4 * 1024 * 1024
+  ) {
+    return { error: "A imagem deve ter no máximo 4MB" }
   }
 
   const supabase = await createClient()

@@ -159,7 +159,7 @@ export function ProductFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image">Foto</Label>
+            <Label htmlFor="image">Foto (máx. 4MB)</Label>
             <Input id="image" name="image" type="file" accept="image/*" />
           </div>
 
