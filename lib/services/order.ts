@@ -12,36 +12,50 @@ export const STATUS_COLUMNS: {
   status: OrderStatus
   label: string
   badgeClassName: string
+  headerClassName: string
+  columnClassName: string
 }[] = [
   {
     status: "new",
-    label: "Novo",
+    label: "Novos",
     badgeClassName: "bg-red-100 text-red-700",
+    headerClassName: "text-red-700",
+    columnClassName: "bg-red-50/60",
   },
   {
     status: "confirmed",
-    label: "Confirmado",
+    label: "Confirmados",
     badgeClassName: "bg-amber-100 text-amber-700",
+    headerClassName: "text-amber-700",
+    columnClassName: "bg-amber-50/60",
   },
   {
     status: "preparing",
     label: "Em preparo",
     badgeClassName: "bg-blue-100 text-blue-700",
+    headerClassName: "text-blue-700",
+    columnClassName: "bg-blue-50/60",
   },
   {
     status: "out_for_delivery",
     label: "Saiu para entrega",
-    badgeClassName: "bg-purple-100 text-purple-700",
+    badgeClassName: "bg-emerald-100 text-emerald-700",
+    headerClassName: "text-emerald-700",
+    columnClassName: "bg-emerald-50/60",
   },
   {
     status: "completed",
-    label: "Concluído",
+    label: "Concluídos",
     badgeClassName: "bg-green-100 text-green-700",
+    headerClassName: "text-green-800",
+    columnClassName: "bg-green-50/60",
   },
   {
     status: "cancelled",
-    label: "Cancelado",
+    label: "Cancelados",
     badgeClassName: "bg-gray-200 text-gray-600",
+    headerClassName: "text-gray-600",
+    columnClassName: "bg-gray-50",
   },
 ]
 

@@ -8,14 +8,16 @@ import { OrderCard } from "@/components/admin/orders/order-card"
 export function KanbanColumn({
   status,
   label,
-  badgeClassName,
+  headerClassName,
+  columnClassName,
   orders,
   onDragStart,
   onDrop,
 }: {
   status: OrderStatus
   label: string
-  badgeClassName: string
+  headerClassName: string
+  columnClassName: string
   orders: OrderWithCustomer[]
   onDragStart: (orderId: string) => void
   onDrop: (status: OrderStatus) => void
@@ -35,19 +37,15 @@ export function KanbanColumn({
         onDrop(status)
       }}
       className={cn(
-        "bg-muted/40 flex w-64 shrink-0 flex-col gap-2 rounded-lg border p-2",
-        isOver && "border-primary bg-muted",
+        "flex w-72 shrink-0 flex-col gap-2 rounded-xl border p-3",
+        columnClassName,
+        isOver && "border-primary",
       )}
     >
-      <div className="flex items-center justify-between px-1 text-sm font-medium">
-        <span>{label}</span>
-        <span
-          className={cn(
-            "flex size-5 items-center justify-center rounded-full text-xs font-semibold",
-            badgeClassName,
-          )}
-        >
-          {orders.length}
+      <div className="flex items-center gap-2 px-1 text-sm font-semibold">
+        <span className={headerClassName}>{label}</span>
+        <span className={cn("text-xs font-medium", headerClassName)}>
+          ({orders.length})
         </span>
       </div>
       <div className="flex min-h-16 flex-col gap-2">
