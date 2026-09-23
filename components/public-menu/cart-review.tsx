@@ -26,7 +26,7 @@ export function CartReview({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={item.imageUrl ?? "/file.svg"}
+              src={item.imageUrl ?? "/placeholder-image.svg"}
               alt={item.name}
               className="bg-muted size-12 shrink-0 rounded-xl object-cover"
             />

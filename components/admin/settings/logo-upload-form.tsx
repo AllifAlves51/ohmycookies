@@ -43,7 +43,7 @@ export function LogoUploadForm({ logoUrl }: { logoUrl: string | null }) {
           <div className="bg-muted flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={preview ?? logoUrl ?? "/file.svg"}
+              src={preview ?? logoUrl ?? "/placeholder-image.svg"}
               alt="Logo da loja"
               className="size-full object-cover"
             />

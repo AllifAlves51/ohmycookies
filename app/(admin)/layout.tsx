@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/">) {
         <div className="mb-6 flex items-center gap-2 px-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={store?.logo_url ?? "/file.svg"}
+            src={store?.logo_url ?? "/placeholder-image.svg"}
             alt={storeName}
             className="bg-muted size-9 shrink-0 rounded-full object-cover"
           />

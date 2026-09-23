@@ -14,7 +14,7 @@ export function StoreHeader({
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={store.logo_url ?? "/file.svg"}
+          src={store.logo_url ?? "/placeholder-image.svg"}
           alt={store.name}
           className="size-16 shrink-0 rounded-full border-2 border-white/50 bg-white/10 object-cover"
         />

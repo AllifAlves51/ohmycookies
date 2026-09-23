@@ -28,7 +28,7 @@ function ProductRow({
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={product.image_url ?? "/file.svg"}
+          src={product.image_url ?? "/placeholder-image.svg"}
           alt={product.name}
           className="bg-muted size-12 shrink-0 rounded-md object-cover"
         />
