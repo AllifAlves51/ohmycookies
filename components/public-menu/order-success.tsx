@@ -1,4 +1,5 @@
-import { CheckCircle2, MessageCircle } from "lucide-react"
+import Link from "next/link"
+import { CheckCircle2, MapPin, MessageCircle } from "lucide-react"
 import {
   buildOrderWhatsappMessage,
   buildWhatsappLink,
@@ -8,10 +9,12 @@ import { Button } from "@/components/ui/button"
 
 export function OrderSuccess({
   summary,
+  storeSlug,
   storeWhatsapp,
   onClose,
 }: {
   summary: WhatsappOrderSummary
+  storeSlug: string
   storeWhatsapp: string | null
   onClose: () => void
 }) {
@@ -42,9 +45,22 @@ export function OrderSuccess({
           Enviar pedido no WhatsApp
         </Button>
       ) : null}
+      {summary.orderId ? (
+        <Button
+          className="w-full rounded-xl"
+          variant="outline"
+          nativeButton={false}
+          render={
+            <Link href={`/cardapio/${storeSlug}/pedido/${summary.orderId}`} />
+          }
+        >
+          <MapPin />
+          Acompanhar pedido
+        </Button>
+      ) : null}
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         className="w-full rounded-xl"
         onClick={onClose}
       >

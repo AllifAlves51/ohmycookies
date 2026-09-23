@@ -103,6 +103,7 @@ export function CartBar({
         {step === "success" && orderSummary ? (
           <OrderSuccess
             summary={orderSummary}
+            storeSlug={storeSlug}
             storeWhatsapp={storeWhatsapp}
             onClose={() => setOpen(false)}
           />

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { DashboardOrder } from "@/lib/services/dashboard"
+import type { OrderStatus, PaymentPreference } from "@/lib/services/order"
 
 export function getOrdersInRange(
   supabase: SupabaseClient,
@@ -67,4 +68,47 @@ export async function getProductsSoldInRange(
     .sort((a, b) => b.revenueCents - a.revenueCents)
 
   return { data: sorted, error: null }
+}
+
+type OrderPaymentRow = {
+  payment_preference: PaymentPreference | null
+  status: OrderStatus
+}
+
+export function getOrdersPaymentInRange(
+  supabase: SupabaseClient,
+  storeId: string,
+  from: Date,
+  to: Date,
+) {
+  return supabase
+    .from("orders")
+    .select("payment_preference, status")
+    .eq("store_id", storeId)
+    .gte("created_at", from.toISOString())
+    .lte("created_at", to.toISOString())
+    .returns<OrderPaymentRow[]>()
+}
+
+export type PaymentBreakdownRow = { method: PaymentPreference; count: number }
+
+/** Cancelled orders and orders placed before this feature existed (null
+ * preference) are excluded — the chart only reflects real, known choices. */
+export function computePaymentBreakdown(
+  rows: OrderPaymentRow[],
+): PaymentBreakdownRow[] {
+  const totals = new Map<PaymentPreference, number>()
+
+  for (const row of rows) {
+    if (row.status === "cancelled" || !row.payment_preference) continue
+    totals.set(
+      row.payment_preference,
+      (totals.get(row.payment_preference) ?? 0) + 1,
+    )
+  }
+
+  return Array.from(totals.entries()).map(([method, count]) => ({
+    method,
+    count,
+  }))
 }

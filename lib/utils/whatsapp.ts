@@ -1,4 +1,6 @@
 import type { AddressInput } from "@/lib/validations/store"
+import type { PaymentPreference } from "@/lib/services/order"
+import { PAYMENT_PREFERENCE_LABEL } from "@/lib/services/order"
 import { formatAddress } from "@/lib/utils/address"
 import { formatBRL } from "@/lib/utils/money"
 
@@ -9,6 +11,7 @@ export type WhatsappOrderItem = {
 }
 
 export type WhatsappOrderSummary = {
+  orderId: string
   orderNumber: number
   customerName: string
   items: WhatsappOrderItem[]
@@ -18,6 +21,7 @@ export type WhatsappOrderSummary = {
   totalCents: number
   fulfillmentType: "delivery" | "pickup"
   address: AddressInput | null
+  paymentMethod: PaymentPreference
 }
 
 export function buildOrderWhatsappMessage(order: WhatsappOrderSummary): string {
@@ -44,6 +48,7 @@ export function buildOrderWhatsappMessage(order: WhatsappOrderSummary): string {
   if (order.fulfillmentType === "delivery" && order.address) {
     lines.push(`Endereço: ${formatAddress(order.address)}`)
   }
+  lines.push(`Pagamento: ${PAYMENT_PREFERENCE_LABEL[order.paymentMethod]}`)
 
   return lines.join("\n")
 }

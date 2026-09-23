@@ -2,7 +2,12 @@ import Link from "next/link"
 import { Wallet, ClipboardList, Receipt } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { getStoreByOwnerId } from "@/lib/services/store"
-import { getOrdersInRange, getProductsSoldInRange } from "@/lib/services/report"
+import {
+  getOrdersInRange,
+  getProductsSoldInRange,
+  getOrdersPaymentInRange,
+  computePaymentBreakdown,
+} from "@/lib/services/report"
 import { computeDashboardStats } from "@/lib/services/dashboard"
 import {
   REPORT_PERIODS,
@@ -13,6 +18,7 @@ import {
 import { formatBRL } from "@/lib/utils/money"
 import { cn } from "@/lib/utils"
 import { StatCard } from "@/components/admin/dashboard/stat-card"
+import { PaymentBreakdownChart } from "@/components/admin/dashboard/payment-breakdown-chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -54,12 +60,15 @@ export default async function RelatoriosPage({
 
   const { from, to } = getReportDateRange(period)
 
-  const [{ data: orders }, { data: products }] = await Promise.all([
-    getOrdersInRange(supabase, store.id, from, to),
-    getProductsSoldInRange(supabase, store.id, from, to),
-  ])
+  const [{ data: orders }, { data: products }, { data: paymentRows }] =
+    await Promise.all([
+      getOrdersInRange(supabase, store.id, from, to),
+      getProductsSoldInRange(supabase, store.id, from, to),
+      getOrdersPaymentInRange(supabase, store.id, from, to),
+    ])
 
   const stats = computeDashboardStats(orders ?? [])
+  const paymentBreakdown = computePaymentBreakdown(paymentRows ?? [])
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
@@ -99,6 +108,15 @@ export default async function RelatoriosPage({
           icon={Receipt}
         />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Formas de pagamento</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PaymentBreakdownChart data={paymentBreakdown} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

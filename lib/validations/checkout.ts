@@ -17,6 +17,7 @@ export const checkoutSchema = z
     fulfillmentType: z.enum(["delivery", "pickup"]),
     deliveryZoneId: z.string().uuid().nullable(),
     address: addressSchema.nullable(),
+    paymentMethod: z.enum(["cash", "pix", "card"]),
     items: z.array(checkoutItemSchema).min(1, "Seu carrinho está vazio"),
   })
   .refine(

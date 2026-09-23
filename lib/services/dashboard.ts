@@ -89,6 +89,53 @@ export function computeDashboardStats(
   }
 }
 
+export type DashboardDeltas = {
+  revenueDeltaPct: number | null
+  orderCountDeltaPct: number | null
+  averageTicketDeltaPct: number | null
+}
+
+function percentDelta(current: number, previous: number): number | null {
+  if (previous === 0) return null
+  return Math.round(((current - previous) / previous) * 100)
+}
+
+/**
+ * Compares the trailing `days`-day window against the equal-length window
+ * before it — independent of computeDashboardStats' all-time totals, which
+ * the stat cards keep showing as their headline value.
+ */
+export function computeDashboardDeltas(
+  orders: DashboardOrder[],
+  days = 30,
+): DashboardDeltas {
+  const dayMs = 24 * 60 * 60 * 1000
+  const now = Date.now()
+  const currentStart = now - days * dayMs
+  const previousStart = now - days * 2 * dayMs
+
+  const currentOrders = orders.filter((o) => {
+    const t = new Date(o.created_at).getTime()
+    return t >= currentStart && t <= now
+  })
+  const previousOrders = orders.filter((o) => {
+    const t = new Date(o.created_at).getTime()
+    return t >= previousStart && t < currentStart
+  })
+
+  const current = computeDashboardStats(currentOrders)
+  const previous = computeDashboardStats(previousOrders)
+
+  return {
+    revenueDeltaPct: percentDelta(current.revenueCents, previous.revenueCents),
+    orderCountDeltaPct: percentDelta(current.orderCount, previous.orderCount),
+    averageTicketDeltaPct: percentDelta(
+      current.averageTicketCents,
+      previous.averageTicketCents,
+    ),
+  }
+}
+
 export type RevenueByDay = { date: string; revenueCents: number }
 
 export function computeRevenueByDay(

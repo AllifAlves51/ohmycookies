@@ -38,6 +38,23 @@ export const storeInfoSchema = z.object({
 
 export type StoreInfoInput = z.infer<typeof storeInfoSchema>
 
+const optionalUrlSchema = z
+  .string()
+  .trim()
+  .refine(
+    (v) => v === "" || /^https?:\/\/.+/i.test(v),
+    "URL inválida (use http:// ou https://)",
+  )
+  .transform((v) => (v === "" ? null : v))
+
+export const storeLinksSchema = z.object({
+  instagramUrl: optionalUrlSchema,
+  facebookUrl: optionalUrlSchema,
+  websiteUrl: optionalUrlSchema,
+})
+
+export type StoreLinksInput = z.infer<typeof storeLinksSchema>
+
 export const storeSettingsSchema = z
   .object({
     minOrder: z

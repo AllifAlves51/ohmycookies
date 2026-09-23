@@ -1,3 +1,4 @@
+import { AtSign, Share2, Globe } from "lucide-react"
 import type { Store } from "@/lib/services/store"
 import { Badge } from "@/components/ui/badge"
 
@@ -30,6 +31,44 @@ export function StoreHeader({
           </Badge>
         </div>
       </div>
+
+      {store.instagram_url || store.facebook_url || store.website_url ? (
+        <div className="mt-4 flex gap-3">
+          {store.instagram_url ? (
+            <a
+              href={store.instagram_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              className="flex size-8 items-center justify-center rounded-full bg-white/15"
+            >
+              <AtSign className="size-4" />
+            </a>
+          ) : null}
+          {store.facebook_url ? (
+            <a
+              href={store.facebook_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+              className="flex size-8 items-center justify-center rounded-full bg-white/15"
+            >
+              <Share2 className="size-4" />
+            </a>
+          ) : null}
+          {store.website_url ? (
+            <a
+              href={store.website_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Site"
+              className="flex size-8 items-center justify-center rounded-full bg-white/15"
+            >
+              <Globe className="size-4" />
+            </a>
+          ) : null}
+        </div>
+      ) : null}
     </header>
   )
 }

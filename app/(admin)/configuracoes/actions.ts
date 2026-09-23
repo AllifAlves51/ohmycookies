@@ -8,11 +8,13 @@ import {
   storeInfoSchema,
   storeSettingsSchema,
   openingHoursSchema,
+  storeLinksSchema,
 } from "@/lib/validations/store"
 import {
   getStoreByOwnerId,
   updateStore,
   updateStoreSettings,
+  updateStoreLinks,
 } from "@/lib/services/store"
 
 export type SettingsActionState = {
@@ -155,6 +157,42 @@ export async function updateStoreSettingsAction(
 
   revalidatePath("/configuracoes")
   return { success: "Configurações de pedido atualizadas" }
+}
+
+export async function updateStoreLinksAction(
+  _prevState: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const parsed = storeLinksSchema.safeParse({
+    instagramUrl: formData.get("instagramUrl") ?? "",
+    facebookUrl: formData.get("facebookUrl") ?? "",
+    websiteUrl: formData.get("websiteUrl") ?? "",
+  })
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" }
+  }
+
+  const supabase = await createClient()
+  const store = await requireOwnedStore(supabase)
+
+  if (!store) {
+    return { error: "Loja não encontrada" }
+  }
+
+  const { error } = await updateStoreLinks(supabase, store.id, {
+    instagram_url: parsed.data.instagramUrl,
+    facebook_url: parsed.data.facebookUrl,
+    website_url: parsed.data.websiteUrl,
+  })
+
+  if (error) {
+    return { error: "Não foi possível salvar. Tente novamente." }
+  }
+
+  revalidatePath("/configuracoes")
+  revalidatePath("/dashboard")
+  return { success: "Links atualizados" }
 }
 
 export async function uploadLogoAction(

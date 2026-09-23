@@ -7,6 +7,7 @@ import {
   getCustomerCount,
   getTopProducts,
   computeDashboardStats,
+  computeDashboardDeltas,
   computeRevenueByDay,
 } from "@/lib/services/dashboard"
 import { formatBRL } from "@/lib/utils/money"
@@ -54,6 +55,7 @@ export default async function DashboardPage() {
 
   const orders = dashboardOrders ?? []
   const stats = computeDashboardStats(orders)
+  const deltas = computeDashboardDeltas(orders)
   const revenueByDay = computeRevenueByDay(orders, REVENUE_CHART_DAYS)
 
   return (
@@ -65,16 +67,19 @@ export default async function DashboardPage() {
           label="Faturamento"
           value={formatBRL(stats.revenueCents)}
           icon={Wallet}
+          deltaPct={deltas.revenueDeltaPct}
         />
         <StatCard
           label="Pedidos"
           value={String(stats.orderCount)}
           icon={ClipboardList}
+          deltaPct={deltas.orderCountDeltaPct}
         />
         <StatCard
           label="Ticket médio"
           value={formatBRL(stats.averageTicketCents)}
           icon={Receipt}
+          deltaPct={deltas.averageTicketDeltaPct}
         />
         <StatCard
           label="Clientes"

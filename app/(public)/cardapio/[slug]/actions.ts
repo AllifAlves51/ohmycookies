@@ -2,12 +2,14 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { getStoreBySlug } from "@/lib/services/store"
+import { getOrderTracking, type OrderTracking } from "@/lib/services/order"
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations/checkout"
 
 export type CheckoutState = {
   error?: string
   success?: boolean
   orderNumber?: number
+  orderId?: string
 }
 
 export async function submitOrderAction(
@@ -52,6 +54,7 @@ export async function submitOrderAction(
     delivery_zone_id: parsed.data.deliveryZoneId,
     delivery_address:
       parsed.data.fulfillmentType === "delivery" ? parsed.data.address : null,
+    payment_preference: parsed.data.paymentMethod,
   })
 
   if (orderError) {
@@ -80,5 +83,13 @@ export async function submitOrderAction(
     p_order_id: orderId,
   })
 
-  return { success: true, orderNumber: orderNumber ?? undefined }
+  return { success: true, orderNumber: orderNumber ?? undefined, orderId }
+}
+
+export async function getOrderTrackingStatusAction(
+  orderId: string,
+): Promise<OrderTracking | null> {
+  const supabase = await createClient()
+  const { data } = await getOrderTracking(supabase, orderId)
+  return data
 }

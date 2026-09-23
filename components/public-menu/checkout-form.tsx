@@ -46,6 +46,9 @@ export function CheckoutForm({
   const [city, setCity] = useState("")
   const [uf, setUf] = useState("")
   const [zip, setZip] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<
+    "cash" | "pix" | "card"
+  >("cash")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -75,6 +78,7 @@ export function CheckoutForm({
           productId: item.productId,
           quantity: item.quantity,
         })),
+        paymentMethod,
       })
 
       if (result.error) {
@@ -83,6 +87,7 @@ export function CheckoutForm({
       }
 
       const summary: WhatsappOrderSummary = {
+        orderId: result.orderId ?? "",
         orderNumber: result.orderNumber ?? 0,
         customerName: name,
         items: items.map((item) => ({
@@ -99,6 +104,7 @@ export function CheckoutForm({
           fulfillmentType === "delivery"
             ? { street, number, neighborhood, complement, city, state: uf, zip }
             : null,
+        paymentMethod,
       }
 
       clear()
@@ -263,6 +269,36 @@ export function CheckoutForm({
             </fieldset>
           </>
         ) : null}
+
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">Forma de pagamento</legend>
+          <p className="text-muted-foreground text-xs">
+            Combinado diretamente com a loja — não é cobrado por aqui.
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              type="button"
+              variant={paymentMethod === "cash" ? "default" : "outline"}
+              onClick={() => setPaymentMethod("cash")}
+            >
+              Dinheiro
+            </Button>
+            <Button
+              type="button"
+              variant={paymentMethod === "pix" ? "default" : "outline"}
+              onClick={() => setPaymentMethod("pix")}
+            >
+              Pix
+            </Button>
+            <Button
+              type="button"
+              variant={paymentMethod === "card" ? "default" : "outline"}
+              onClick={() => setPaymentMethod("card")}
+            >
+              Cartão
+            </Button>
+          </div>
+        </fieldset>
       </div>
 
       <div className="space-y-2 border-t p-4">

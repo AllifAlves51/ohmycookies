@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getStoreByOwnerId, getStoreSettings } from "@/lib/services/store"
 import { LogoUploadForm } from "@/components/admin/settings/logo-upload-form"
 import { StoreInfoForm } from "@/components/admin/settings/store-info-form"
+import { StoreLinksForm } from "@/components/admin/settings/store-links-form"
 import { OpeningHoursForm } from "@/components/admin/settings/opening-hours-form"
 import { OrderSettingsForm } from "@/components/admin/settings/order-settings-form"
 
@@ -34,6 +35,7 @@ export default async function ConfiguracoesPage() {
       <h1 className="text-2xl font-semibold">Configurações</h1>
       <LogoUploadForm logoUrl={store.logo_url} />
       <StoreInfoForm store={store} />
+      <StoreLinksForm store={store} />
       <OpeningHoursForm openingHours={store.opening_hours} />
       {settings ? <OrderSettingsForm settings={settings} /> : null}
     </main>

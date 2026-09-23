@@ -10,6 +10,9 @@ export type Store = {
   logo_url: string | null
   address: AddressInput | null
   opening_hours: OpeningHoursInput | null
+  instagram_url: string | null
+  facebook_url: string | null
+  website_url: string | null
   created_at: string
   updated_at: string
 }
@@ -61,6 +64,16 @@ export function updateStore(
       | "opening_hours"
       | "logo_url"
     >
+  >,
+) {
+  return supabase.from("stores").update(patch).eq("id", storeId)
+}
+
+export function updateStoreLinks(
+  supabase: SupabaseClient,
+  storeId: string,
+  patch: Partial<
+    Pick<Store, "instagram_url" | "facebook_url" | "website_url">
   >,
 ) {
   return supabase.from("stores").update(patch).eq("id", storeId)
