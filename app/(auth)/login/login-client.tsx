@@ -2,17 +2,14 @@
 
 import { useActionState } from "react"
 import Link from "next/link"
-import { Caveat } from "next/font/google"
 import { useFormStatus } from "react-dom"
-import { Mail, Lock, Heart } from "lucide-react"
+import { Mail, Lock } from "lucide-react"
 import { loginAction, type AuthActionState } from "../actions"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-
-const caveat = Caveat({ subsets: ["latin"], weight: ["600", "700"] })
 
 const initialState: AuthActionState = {}
 
@@ -177,20 +174,6 @@ export function LoginClient({
             className="absolute inset-0 size-full object-cover"
           />
         ) : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
-        <div className="absolute top-16 left-14">
-          <svg width="40" height="40" viewBox="0 0 40 40" className="text-primary/70">
-            <path d="M4 4l6 6M4 14l6-6M14 4l-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
-          </svg>
-        </div>
-        <div className="relative max-w-xs text-center">
-          <p
-            className={`${caveat.className} text-primary text-4xl leading-tight drop-shadow-[0_1px_6px_rgba(255,255,255,0.6)]`}
-          >
-            Cookies que faz dia mais doce.
-          </p>
-          <Heart className="fill-primary text-primary mx-auto mt-3 size-6 drop-shadow-[0_1px_4px_rgba(255,255,255,0.6)]" />
-        </div>
       </div>
     </main>
   )
