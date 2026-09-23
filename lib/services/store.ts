@@ -13,6 +13,7 @@ export type Store = {
   instagram_url: string | null
   facebook_url: string | null
   website_url: string | null
+  login_photo_url: string | null
   created_at: string
   updated_at: string
 }
@@ -63,6 +64,7 @@ export function updateStore(
       | "address"
       | "opening_hours"
       | "logo_url"
+      | "login_photo_url"
     >
   >,
 ) {
@@ -77,6 +79,18 @@ export function updateStoreLinks(
   >,
 ) {
   return supabase.from("stores").update(patch).eq("id", storeId)
+}
+
+/** The shared public /login and /cadastro screens have no per-store
+ * context, so this picks whichever store set a photo first. */
+export function getLoginPhoto(supabase: SupabaseClient) {
+  return supabase
+    .from("stores")
+    .select("login_photo_url")
+    .not("login_photo_url", "is", null)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle<{ login_photo_url: string | null }>()
 }
 
 export function updateStoreSettings(

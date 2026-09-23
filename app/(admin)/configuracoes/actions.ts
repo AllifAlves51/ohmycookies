@@ -247,3 +247,57 @@ export async function uploadLogoAction(
   revalidatePath("/dashboard")
   return { success: "Logo atualizada" }
 }
+
+export async function uploadLoginPhotoAction(
+  _prevState: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const file = formData.get("loginPhoto")
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Selecione uma imagem" }
+  }
+
+  if (!file.type.startsWith("image/")) {
+    return { error: "O arquivo precisa ser uma imagem" }
+  }
+
+  if (file.size > 4 * 1024 * 1024) {
+    return { error: "A imagem deve ter no máximo 4MB" }
+  }
+
+  const supabase = await createClient()
+  const store = await requireOwnedStore(supabase)
+
+  if (!store) {
+    return { error: "Loja não encontrada" }
+  }
+
+  const extension = file.name.split(".").pop() ?? "jpg"
+  const path = `${store.id}/login-photo-${Date.now()}.${extension}`
+
+  const { error: uploadError } = await supabase.storage
+    .from("store-logos")
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (uploadError) {
+    return { error: "Não foi possível enviar a imagem. Tente novamente." }
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("store-logos").getPublicUrl(path)
+
+  const { error } = await updateStore(supabase, store.id, {
+    login_photo_url: publicUrl,
+  })
+
+  if (error) {
+    return { error: "Não foi possível salvar a imagem. Tente novamente." }
+  }
+
+  revalidatePath("/configuracoes")
+  revalidatePath("/login")
+  revalidatePath("/cadastro")
+  return { success: "Foto da tela de login atualizada" }
+}
