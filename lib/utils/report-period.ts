@@ -42,3 +42,15 @@ export function getReportDateRange(period: ReportPeriod): {
 
   return { from, to }
 }
+
+/** The equal-length window immediately before `from`, used to compute the
+ * percentage deltas shown on the report's stat cards. */
+export function getPreviousDateRange(from: Date, to: Date): {
+  from: Date
+  to: Date
+} {
+  const durationMs = to.getTime() - from.getTime()
+  const previousTo = new Date(from.getTime() - 1)
+  const previousFrom = new Date(previousTo.getTime() - durationMs)
+  return { from: previousFrom, to: previousTo }
+}

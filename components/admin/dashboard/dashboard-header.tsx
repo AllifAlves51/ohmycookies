@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react"
+import { UserAvatar } from "@/components/admin/user-avatar"
 
 const MONTH_LONG = [
   "janeiro",
@@ -41,21 +42,7 @@ export function DashboardHeader({
           <span>{formatTodayLabel(today)}</span>
           <ChevronDown className="text-muted-foreground size-4" />
         </div>
-        <div
-          className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-semibold"
-          title={name}
-        >
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt={name}
-              className="size-full object-cover"
-            />
-          ) : (
-            name.charAt(0).toUpperCase()
-          )}
-        </div>
+        <UserAvatar name={name} avatarUrl={avatarUrl} />
       </div>
     </div>
   )
