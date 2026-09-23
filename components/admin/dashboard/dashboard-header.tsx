@@ -19,7 +19,13 @@ function formatTodayLabel(date: Date) {
   return `Hoje, ${date.getDate()} de ${MONTH_LONG[date.getMonth()]} de ${date.getFullYear()}`
 }
 
-export function DashboardHeader({ name }: { name: string }) {
+export function DashboardHeader({
+  name,
+  avatarUrl,
+}: {
+  name: string
+  avatarUrl: string | null
+}) {
   const today = new Date()
 
   return (
@@ -36,11 +42,19 @@ export function DashboardHeader({ name }: { name: string }) {
           <ChevronDown className="text-muted-foreground size-4" />
         </div>
         <div
-          className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-          aria-hidden="true"
+          className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-semibold"
           title={name}
         >
-          {name.charAt(0).toUpperCase()}
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt={name}
+              className="size-full object-cover"
+            />
+          ) : (
+            name.charAt(0).toUpperCase()
+          )}
         </div>
       </div>
     </div>

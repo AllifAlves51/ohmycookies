@@ -248,6 +248,67 @@ export async function uploadLogoAction(
   return { success: "Logo atualizada" }
 }
 
+export async function uploadAvatarAction(
+  _prevState: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const file = formData.get("avatar")
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Selecione uma imagem" }
+  }
+
+  if (!file.type.startsWith("image/")) {
+    return { error: "O arquivo precisa ser uma imagem" }
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    return { error: "A imagem deve ter no máximo 2MB" }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Sessão expirada. Faça login novamente." }
+  }
+
+  const store = await requireOwnedStore(supabase)
+
+  if (!store) {
+    return { error: "Loja não encontrada" }
+  }
+
+  const extension = file.name.split(".").pop() ?? "jpg"
+  const path = `${store.id}/avatar-${Date.now()}.${extension}`
+
+  const { error: uploadError } = await supabase.storage
+    .from("store-logos")
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (uploadError) {
+    return { error: "Não foi possível enviar a imagem. Tente novamente." }
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("store-logos").getPublicUrl(path)
+
+  const { error } = await supabase.auth.updateUser({
+    data: { avatar_url: publicUrl },
+  })
+
+  if (error) {
+    return { error: "Não foi possível salvar a foto. Tente novamente." }
+  }
+
+  revalidatePath("/configuracoes")
+  revalidatePath("/dashboard")
+  return { success: "Foto de perfil atualizada" }
+}
+
 export async function uploadLoginPhotoAction(
   _prevState: SettingsActionState,
   formData: FormData,

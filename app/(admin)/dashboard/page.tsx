@@ -12,6 +12,7 @@ import {
   computeRevenueByDay,
 } from "@/lib/services/dashboard"
 import { formatBRL } from "@/lib/utils/money"
+import { firstNameFromEmail } from "@/lib/utils/user"
 import { StatCard } from "@/components/admin/dashboard/stat-card"
 import { DashboardHeader } from "@/components/admin/dashboard/dashboard-header"
 import { RevenueChart } from "@/components/admin/dashboard/revenue-chart"
@@ -20,12 +21,6 @@ import { OrdersInProgressPanel } from "@/components/admin/dashboard/orders-in-pr
 import { PromoBanner } from "@/components/admin/dashboard/promo-banner"
 
 const REVENUE_CHART_DAYS = 30
-
-function firstNameFromEmail(email: string) {
-  const local = email.split("@")[0] ?? "Lojista"
-  const cleaned = local.replace(/[^a-zA-ZÀ-ÿ]+$/, "") || local
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -80,10 +75,14 @@ export default async function DashboardPage() {
   }))
 
   const name = firstNameFromEmail(user.email ?? "")
+  const avatarUrl =
+    typeof user.user_metadata?.avatar_url === "string"
+      ? user.user_metadata.avatar_url
+      : null
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <DashboardHeader name={name} />
+      <DashboardHeader name={name} avatarUrl={avatarUrl} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard

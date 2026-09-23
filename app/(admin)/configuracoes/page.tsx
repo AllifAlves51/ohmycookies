@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { getStoreByOwnerId, getStoreSettings } from "@/lib/services/store"
+import { firstNameFromEmail } from "@/lib/utils/user"
+import { AvatarUploadForm } from "@/components/admin/settings/avatar-upload-form"
 import { LogoUploadForm } from "@/components/admin/settings/logo-upload-form"
 import { LoginPhotoForm } from "@/components/admin/settings/login-photo-form"
 import { StoreInfoForm } from "@/components/admin/settings/store-info-form"
@@ -30,10 +32,18 @@ export default async function ConfiguracoesPage() {
   }
 
   const { data: settings } = await getStoreSettings(supabase, store.id)
+  const avatarUrl =
+    typeof user.user_metadata?.avatar_url === "string"
+      ? user.user_metadata.avatar_url
+      : null
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-2xl font-semibold">Configurações</h1>
+      <AvatarUploadForm
+        avatarUrl={avatarUrl}
+        initial={firstNameFromEmail(user.email ?? "").charAt(0)}
+      />
       <LogoUploadForm logoUrl={store.logo_url} />
       <LoginPhotoForm loginPhotoUrl={store.login_photo_url} />
       <StoreInfoForm store={store} />
