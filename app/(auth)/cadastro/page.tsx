@@ -33,6 +33,12 @@ export default function CadastroPage() {
 
       <div className="flex flex-1 items-center justify-center p-6 sm:p-8">
         <div className="w-full max-w-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.webp"
+            alt="OhMyCookies"
+            className="mx-auto mb-6 size-16 object-contain"
+          />
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-semibold">Crie sua loja</h1>
             <p className="text-muted-foreground mt-1 text-sm">

@@ -33,6 +33,12 @@ export default function LoginPage() {
 
       <div className="flex flex-1 items-center justify-center p-6 sm:p-8">
         <div className="w-full max-w-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.webp"
+            alt="OhMyCookies"
+            className="mx-auto mb-6 size-16 object-contain"
+          />
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-semibold">Bem-vindo de volta</h1>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -52,7 +58,15 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Senha</Label>
+                <Link
+                  href="/esqueci-senha"
+                  className="text-muted-foreground text-xs underline underline-offset-4"
+                >
+                  Esqueci minha senha
+                </Link>
+              </div>
               <Input
                 id="password"
                 name="password"

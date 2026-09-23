@@ -27,3 +27,15 @@ export function signUpWithPassword(
 export function signOut(supabase: SupabaseClient) {
   return supabase.auth.signOut()
 }
+
+export function requestPasswordReset(
+  supabase: SupabaseClient,
+  email: string,
+  redirectTo: string,
+) {
+  return supabase.auth.resetPasswordForEmail(email, { redirectTo })
+}
+
+export function updatePassword(supabase: SupabaseClient, password: string) {
+  return supabase.auth.updateUser({ password })
+}
