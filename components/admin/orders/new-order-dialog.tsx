@@ -106,13 +106,13 @@ export function NewOrderDialog({
         render={
           <Button>
             <Plus />
-            Novo pedido
+            Criar pedido
           </Button>
         }
       />
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Novo pedido</DialogTitle>
+          <DialogTitle>Criar pedido</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

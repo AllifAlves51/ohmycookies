@@ -175,7 +175,7 @@ export function KanbanBoard({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar pedido, cliente ou telefone..."
+            placeholder="Pesquise pelo nome do cliente ou código do pedido"
             className="rounded-lg pl-9"
           />
         </div>
@@ -199,7 +199,7 @@ export function KanbanBoard({
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-2">
-        {STATUS_COLUMNS.map(
+        {STATUS_COLUMNS.filter((column) => column.status !== "confirmed").map(
           ({ status, label, headerClassName, columnClassName }) => (
             <KanbanColumn
               key={status}

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import type { AddressInput } from "@/lib/validations/store"
 
 export type OrderStatus =
   | "new"
@@ -75,6 +76,7 @@ export type Order = {
   fulfillment_type: "delivery" | "pickup"
   delivery_zone_name: string | null
   delivery_estimated_minutes: number | null
+  delivery_address: AddressInput | null
   payment_preference: PaymentPreference | null
   subtotal_cents: number
   delivery_fee_cents: number
