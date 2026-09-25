@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { MessageCircle } from "lucide-react"
 import {
   PAYMENT_PREFERENCE_LABEL,
@@ -11,7 +10,6 @@ import { formatBRL } from "@/lib/utils/money"
 import { formatAddress } from "@/lib/utils/address"
 import { buildWhatsappLink } from "@/lib/utils/whatsapp"
 import { OrderProgressDots } from "@/components/admin/orders/order-progress-dots"
-import { OrderDetailDialog } from "@/components/admin/orders/order-detail-dialog"
 
 const STATUS_LABEL = new Map(STATUS_COLUMNS.map((c) => [c.status, c.label]))
 
@@ -26,15 +24,13 @@ function formatDateTime(iso: string) {
 
 export function OrderCard({
   order,
-  storeSlug,
+  onOpen,
   onDragStart,
 }: {
   order: OrderWithCustomer
-  storeSlug: string
+  onOpen: (orderId: string) => void
   onDragStart: (orderId: string) => void
 }) {
-  const [detailOpen, setDetailOpen] = useState(false)
-
   const whatsappLink = order.customer?.whatsapp
     ? buildWhatsappLink(
         order.customer.whatsapp,
@@ -43,14 +39,13 @@ export function OrderCard({
     : null
 
   return (
-    <>
     <div
       draggable
       onDragStart={(event) => {
         event.dataTransfer.setData("text/plain", order.id)
         onDragStart(order.id)
       }}
-      onClick={() => setDetailOpen(true)}
+      onClick={() => onOpen(order.id)}
       className="bg-card cursor-pointer space-y-2 rounded-lg border p-3 text-sm active:cursor-grabbing"
     >
       <div className="flex items-start justify-between gap-2">
@@ -109,13 +104,5 @@ export function OrderCard({
         <span>{formatDateTime(order.updated_at)}</span>
       </div>
     </div>
-
-    <OrderDetailDialog
-      order={order}
-      storeSlug={storeSlug}
-      open={detailOpen}
-      onOpenChange={setDetailOpen}
-    />
-    </>
   )
 }

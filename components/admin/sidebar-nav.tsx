@@ -11,6 +11,7 @@ import {
   Bike,
   Tag,
   Settings,
+  MessageCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/entrega", label: "Entrega", icon: Bike },
   { href: "/cupons", label: "Cupons", icon: Tag },
+  { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const
 

@@ -29,6 +29,9 @@ export type StoreSettings = {
   free_delivery_threshold_cents: number | null
   order_prep_minutes: number
   address_map_confirmation_enabled: boolean
+  /** Raw jsonb — always read through resolveTemplates(). Absent until the
+   * whatsapp_message_templates migration runs. */
+  whatsapp_templates?: unknown
 }
 
 export function getStoreByOwnerId(supabase: SupabaseClient, ownerId: string) {
@@ -77,9 +80,7 @@ export function updateStore(
 export function updateStoreLinks(
   supabase: SupabaseClient,
   storeId: string,
-  patch: Partial<
-    Pick<Store, "instagram_url" | "facebook_url" | "website_url">
-  >,
+  patch: Partial<Pick<Store, "instagram_url" | "facebook_url" | "website_url">>,
 ) {
   return supabase.from("stores").update(patch).eq("id", storeId)
 }

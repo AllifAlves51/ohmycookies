@@ -27,7 +27,11 @@ import {
 } from "@/lib/services/order"
 import { formatBRL } from "@/lib/utils/money"
 import { formatAddress } from "@/lib/utils/address"
-import { buildStatusMessage, buildWhatsappLink } from "@/lib/utils/whatsapp"
+import { buildWhatsappLink } from "@/lib/utils/whatsapp"
+import {
+  buildStatusMessage,
+  type WhatsappTemplates,
+} from "@/lib/whatsapp-templates"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -68,13 +72,21 @@ function formatDateTime(iso: string) {
 export function OrderDetailDialog({
   order,
   storeSlug,
+  storeName,
+  templates,
   open,
   onOpenChange,
+  onStatusChange,
+  onDeleted,
 }: {
   order: OrderWithCustomer
   storeSlug: string
+  storeName: string
+  templates: WhatsappTemplates
   open: boolean
   onOpenChange: (open: boolean) => void
+  onStatusChange?: (orderId: string, status: OrderStatus) => void
+  onDeleted?: (orderId: string) => void
 }) {
   const router = useRouter()
   const [detail, setDetail] = useState<OrderDetail | null>(null)
@@ -87,14 +99,16 @@ export function OrderDetailDialog({
 
   useEffect(() => {
     if (!open) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resyncs local optimistic status with the server-confirmed one each time the dialog reopens for this order.
-    setStatus(order.status)
-    setNotifyMessage(null)
     getOrderDetailAction(order.id).then((result) => {
       setDetail(result)
       setNotes(result?.notes ?? "")
     })
-  }, [open, order.id, order.status])
+  }, [open, order.id])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- follows status changes made elsewhere (realtime, another device). Deliberately does not clear the pending customer notification.
+    setStatus(order.status)
+  }, [order.status])
 
   const currentIndex = STAGES.indexOf(status)
   const nextStatus =
@@ -114,14 +128,18 @@ export function OrderDetailDialog({
 
   function changeStatus(newStatus: OrderStatus) {
     setStatus(newStatus)
+    onStatusChange?.(order.id, newStatus)
     setNotifyMessage(
       order.customer?.whatsapp
         ? buildStatusMessage({
-            customerName: order.customer.name,
-            orderNumber: order.order_number,
+            templates,
             status: newStatus,
             fulfillmentType: order.fulfillment_type,
+            customerName: order.customer.name,
+            orderNumber: order.order_number,
             trackingUrl: `${window.location.origin}${trackingPath}`,
+            menuUrl: `${window.location.origin}/cardapio/${storeSlug}`,
+            storeName,
           })
         : null,
     )
@@ -157,6 +175,7 @@ export function OrderDetailDialog({
 
   function handleDelete() {
     startTransition(() => deleteOrderAction(order.id))
+    onDeleted?.(order.id)
     onOpenChange(false)
   }
 

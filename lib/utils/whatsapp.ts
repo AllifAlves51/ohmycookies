@@ -1,5 +1,5 @@
 import type { AddressInput } from "@/lib/validations/store"
-import type { OrderStatus, PaymentPreference } from "@/lib/services/order"
+import type { PaymentPreference } from "@/lib/services/order"
 import { PAYMENT_PREFERENCE_LABEL } from "@/lib/services/order"
 import { PIX_KEY, PIX_RECIPIENT_NAME } from "@/lib/pix"
 import { formatAddress } from "@/lib/utils/address"
@@ -60,43 +60,6 @@ export function buildOrderWhatsappMessage(order: WhatsappOrderSummary): string {
     lines.push("_Envio o comprovante por aqui._")
   }
 
-  return lines.join("\n")
-}
-
-/** Ready-to-send WhatsApp text telling the customer where their order is.
- * The store owner reviews/edits it before it goes out. */
-export function buildStatusMessage({
-  customerName,
-  orderNumber,
-  status,
-  fulfillmentType,
-  trackingUrl,
-}: {
-  customerName: string
-  orderNumber: number
-  status: OrderStatus
-  fulfillmentType: "delivery" | "pickup"
-  trackingUrl: string
-}): string {
-  const firstName = customerName.trim().split(/\s+/)[0] || customerName
-  const order = `*#${orderNumber}*`
-
-  const body: Record<OrderStatus, string> = {
-    new: `Recebemos seu pedido ${order} e ele já está na nossa fila! 🍪`,
-    confirmed: `Seu pedido ${order} foi confirmado! 🍪`,
-    preparing: `Seu pedido ${order} está sendo preparado agora! 👩‍🍳🍪`,
-    out_for_delivery:
-      fulfillmentType === "delivery"
-        ? `Seu pedido ${order} saiu para entrega e logo chega aí! 🛵`
-        : `Seu pedido ${order} está pronto para retirada! Pode vir buscar 🛍️`,
-    completed: `Seu pedido ${order} foi concluído. Muito obrigado pela preferência, esperamos que goste! ❤️🍪`,
-    cancelled: `Infelizmente seu pedido ${order} foi cancelado. Se tiver qualquer dúvida, é só responder esta mensagem.`,
-  }
-
-  const lines = [`Olá, ${firstName}!`, body[status]]
-  if (status !== "cancelled" && status !== "completed") {
-    lines.push("", `Acompanhe por aqui: ${trackingUrl}`)
-  }
   return lines.join("\n")
 }
 

@@ -18,6 +18,7 @@ export default function robots(): MetadataRoute.Robots {
         "/entrega",
         "/relatorios",
         "/configuracoes",
+        "/whatsapp",
         "/login",
         "/cadastro",
         "/esqueci-senha",

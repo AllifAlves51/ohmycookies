@@ -13,6 +13,7 @@ import {
 } from "@/lib/services/order"
 import { updateOrderStatusAction } from "@/app/(admin)/pedidos/actions"
 import { KanbanColumn } from "@/components/admin/orders/kanban-column"
+import { OrderDetailDialog } from "@/components/admin/orders/order-detail-dialog"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -22,7 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { buildStatusMessage, buildWhatsappLink } from "@/lib/utils/whatsapp"
+import { buildWhatsappLink } from "@/lib/utils/whatsapp"
+import {
+  buildStatusMessage,
+  type WhatsappTemplates,
+} from "@/lib/whatsapp-templates"
 
 const STATUS_LABEL = new Map(STATUS_COLUMNS.map((c) => [c.status, c.label]))
 
@@ -53,10 +58,14 @@ function isWithinDays(iso: string, days: number) {
 export function KanbanBoard({
   storeId,
   storeSlug,
+  storeName,
+  templates,
   initialOrders,
 }: {
   storeId: string
   storeSlug: string
+  storeName: string
+  templates: WhatsappTemplates
   initialOrders: OrderWithCustomer[]
 }) {
   const [orders, setOrders] = useState(initialOrders)
@@ -98,11 +107,17 @@ export function KanbanBoard({
               ),
             )
           }
-
-          if (payload.eventType === "DELETE") {
-            const removed = payload.old as { id: string }
-            setOrders((prev) => prev.filter((order) => order.id !== removed.id))
-          }
+        },
+      )
+      // Supabase can't apply a column filter to DELETE events (the old row
+      // only carries the primary key), so deletes need their own unfiltered
+      // listener; ids from other stores simply won't match anything here.
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "orders" },
+        (payload) => {
+          const removed = payload.old as { id?: string }
+          if (removed.id) handleOrderDeleted(removed.id)
         },
       )
       .subscribe()
@@ -125,15 +140,22 @@ export function KanbanBoard({
     if (!customer?.whatsapp) return
 
     const message = buildStatusMessage({
-      customerName: customer.name,
-      orderNumber: order.order_number,
+      templates,
       status,
       fulfillmentType: order.fulfillment_type,
+      customerName: customer.name,
+      orderNumber: order.order_number,
       trackingUrl: `${window.location.origin}/cardapio/${storeSlug}/pedido/${order.id}`,
+      menuUrl: `${window.location.origin}/cardapio/${storeSlug}`,
+      storeName,
     })
+    if (!message) return
+
     toast(`Pedido #${order.order_number} → ${STATUS_LABEL.get(status)}`, {
       description: "Quer avisar o cliente pelo WhatsApp?",
-      duration: 10000,
+      // Stays until dismissed — the owner may need a moment before sending.
+      duration: Infinity,
+      closeButton: true,
       action: {
         label: "Avisar cliente",
         onClick: () =>
@@ -147,6 +169,20 @@ export function KanbanBoard({
   }
 
   const [draggingOrderId, setDraggingOrderId] = useState<string | null>(null)
+  // Lives here, not inside OrderCard: a status change moves the card to
+  // another column (remounting it), which would close a card-owned dialog.
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null)
+  const openOrder = orders.find((order) => order.id === openOrderId) ?? null
+
+  function handleOrderDeleted(orderId: string) {
+    setOrders((prev) => prev.filter((order) => order.id !== orderId))
+  }
+
+  function handleDialogStatusChange(orderId: string, status: OrderStatus) {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
+    )
+  }
 
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -243,7 +279,7 @@ export function KanbanBoard({
               headerClassName={headerClassName}
               columnClassName={columnClassName}
               orders={filteredOrders.filter((order) => order.status === status)}
-              storeSlug={storeSlug}
+              onOpenOrder={setOpenOrderId}
               onDragStart={setDraggingOrderId}
               onDrop={(dropStatus) => {
                 if (draggingOrderId) {
@@ -255,6 +291,22 @@ export function KanbanBoard({
           ),
         )}
       </div>
+
+      {openOrder ? (
+        <OrderDetailDialog
+          key={openOrder.id}
+          order={openOrder}
+          storeSlug={storeSlug}
+          storeName={storeName}
+          templates={templates}
+          open
+          onOpenChange={(open) => {
+            if (!open) setOpenOrderId(null)
+          }}
+          onStatusChange={handleDialogStatusChange}
+          onDeleted={handleOrderDeleted}
+        />
+      ) : null}
     </div>
   )
 }

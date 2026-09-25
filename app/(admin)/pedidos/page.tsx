@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
-import { getStoreByOwnerId } from "@/lib/services/store"
+import { getStoreByOwnerId, getStoreSettings } from "@/lib/services/store"
+import { resolveTemplates } from "@/lib/whatsapp-templates"
 import { getOrders } from "@/lib/services/order"
 import { getProducts } from "@/lib/services/product"
 import { getDeliveryZones } from "@/lib/services/delivery"
@@ -28,12 +29,17 @@ export default async function PedidosPage() {
     )
   }
 
-  const [{ data: orders }, { data: products }, { data: deliveryZones }] =
-    await Promise.all([
-      getOrders(supabase, store.id),
-      getProducts(supabase, store.id),
-      getDeliveryZones(supabase, store.id),
-    ])
+  const [
+    { data: orders },
+    { data: products },
+    { data: deliveryZones },
+    { data: settings },
+  ] = await Promise.all([
+    getOrders(supabase, store.id),
+    getProducts(supabase, store.id),
+    getDeliveryZones(supabase, store.id),
+    getStoreSettings(supabase, store.id),
+  ])
 
   return (
     <main className="flex flex-1 flex-col">
@@ -52,6 +58,8 @@ export default async function PedidosPage() {
       <KanbanBoard
         storeId={store.id}
         storeSlug={store.slug}
+        storeName={store.name}
+        templates={resolveTemplates(settings?.whatsapp_templates)}
         initialOrders={orders ?? []}
       />
     </main>

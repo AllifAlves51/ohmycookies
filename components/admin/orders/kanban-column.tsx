@@ -11,7 +11,7 @@ export function KanbanColumn({
   headerClassName,
   columnClassName,
   orders,
-  storeSlug,
+  onOpenOrder,
   onDragStart,
   onDrop,
 }: {
@@ -20,7 +20,7 @@ export function KanbanColumn({
   headerClassName: string
   columnClassName: string
   orders: OrderWithCustomer[]
-  storeSlug: string
+  onOpenOrder: (orderId: string) => void
   onDragStart: (orderId: string) => void
   onDrop: (status: OrderStatus) => void
 }) {
@@ -55,7 +55,7 @@ export function KanbanColumn({
           <OrderCard
             key={order.id}
             order={order}
-            storeSlug={storeSlug}
+            onOpen={onOpenOrder}
             onDragStart={onDragStart}
           />
         ))}
