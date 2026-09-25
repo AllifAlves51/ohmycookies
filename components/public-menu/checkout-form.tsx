@@ -6,6 +6,11 @@ import { useCart } from "@/components/public-menu/cart-context"
 import type { DeliveryZone } from "@/lib/services/delivery"
 import { formatBRL } from "@/lib/utils/money"
 import { rememberOrder } from "@/lib/utils/order-history"
+import {
+  clearCustomerProfile,
+  loadCustomerProfile,
+  saveCustomerProfile,
+} from "@/lib/utils/customer-profile"
 import type { WhatsappOrderSummary } from "@/lib/utils/whatsapp"
 import {
   submitOrderAction,
@@ -13,6 +18,7 @@ import {
   previewCouponAction,
   type DeliveryEstimate,
 } from "@/app/(public)/cardapio/[slug]/actions"
+import { PixInfo } from "@/components/public-menu/pix-info"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,22 +46,32 @@ export function CheckoutForm({
   onSuccess: (summary: WhatsappOrderSummary) => void
 }) {
   const { items, subtotalCents, clear } = useCart()
-  const [name, setName] = useState("")
-  const [whatsapp, setWhatsapp] = useState("")
+  // The form only mounts client-side (after opening the cart), so reading
+  // storage in the initial state can't cause a hydration mismatch.
+  const [saved] = useState(() => loadCustomerProfile(storeSlug))
+  const [name, setName] = useState(saved?.name ?? "")
+  const [whatsapp, setWhatsapp] = useState(saved?.whatsapp ?? "")
   const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">(
-    deliveryEnabled ? "delivery" : "pickup",
+    () => {
+      if (saved?.fulfillmentType === "pickup" && pickupEnabled) return "pickup"
+      if (saved?.fulfillmentType === "delivery" && deliveryEnabled) {
+        return "delivery"
+      }
+      return deliveryEnabled ? "delivery" : "pickup"
+    },
   )
   const [deliveryZoneId, setDeliveryZoneId] = useState("")
-  const [street, setStreet] = useState("")
-  const [number, setNumber] = useState("")
-  const [neighborhood, setNeighborhood] = useState("")
-  const [complement, setComplement] = useState("")
+  const [street, setStreet] = useState(saved?.street ?? "")
+  const [number, setNumber] = useState(saved?.number ?? "")
+  const [neighborhood, setNeighborhood] = useState(saved?.neighborhood ?? "")
+  const [complement, setComplement] = useState(saved?.complement ?? "")
   const [city] = useState("Primavera do Leste")
   const [uf] = useState("MT")
-  const [zip, setZip] = useState("")
+  const [zip, setZip] = useState(saved?.zip ?? "")
   const [paymentMethod, setPaymentMethod] = useState<
     "cash" | "pix" | "card"
-  >("cash")
+  >(saved?.paymentMethod ?? "cash")
+  const [hasSavedProfile, setHasSavedProfile] = useState(Boolean(saved))
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [estimate, setEstimate] = useState<DeliveryEstimate | null>(null)
@@ -93,6 +109,20 @@ export function CheckoutForm({
         }
       })
       .finally(() => setIsCheckingCoupon(false))
+  }
+
+  function handleForgetProfile() {
+    clearCustomerProfile(storeSlug)
+    setHasSavedProfile(false)
+    setName("")
+    setWhatsapp("")
+    setStreet("")
+    setNumber("")
+    setNeighborhood("")
+    setComplement("")
+    setZip("")
+    setDeliveryZoneId("")
+    setEstimate(null)
   }
 
   function handleRemoveCoupon() {
@@ -180,6 +210,25 @@ export function CheckoutForm({
         rememberOrder(storeSlug, result.orderId)
       }
 
+      // Keep the previously saved address when this order was a pickup.
+      saveCustomerProfile(storeSlug, {
+        name: name.trim(),
+        whatsapp: whatsapp.trim(),
+        fulfillmentType,
+        street: fulfillmentType === "delivery" ? street : (saved?.street ?? ""),
+        number: fulfillmentType === "delivery" ? number : (saved?.number ?? ""),
+        neighborhood:
+          fulfillmentType === "delivery"
+            ? neighborhood
+            : (saved?.neighborhood ?? ""),
+        complement:
+          fulfillmentType === "delivery"
+            ? complement
+            : (saved?.complement ?? ""),
+        zip: fulfillmentType === "delivery" ? zip : (saved?.zip ?? ""),
+        paymentMethod,
+      })
+
       const finalDiscountCents = result.discountCents ?? 0
 
       const summary: WhatsappOrderSummary = {
@@ -229,10 +278,25 @@ export function CheckoutForm({
       className="flex flex-1 flex-col overflow-y-auto"
     >
       <div className="flex-1 space-y-4 px-4">
+        {hasSavedProfile ? (
+          <div className="bg-secondary flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs">
+            <span className="text-muted-foreground">
+              Preenchemos com seus dados do último pedido.
+            </span>
+            <button
+              type="button"
+              onClick={handleForgetProfile}
+              className="text-primary shrink-0 font-medium"
+            >
+              Não sou eu
+            </button>
+          </div>
+        ) : null}
         <div className="space-y-2">
           <Label htmlFor="customerName">Nome</Label>
           <Input
             id="customerName"
+            autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -242,6 +306,9 @@ export function CheckoutForm({
           <Label htmlFor="customerWhatsapp">WhatsApp (DDD + número)</Label>
           <Input
             id="customerWhatsapp"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel-national"
             value={whatsapp}
             onChange={(e) => setWhatsapp(e.target.value)}
             placeholder="66999990000"
@@ -277,6 +344,7 @@ export function CheckoutForm({
                   <Label htmlFor="street">Rua</Label>
                   <Input
                     id="street"
+                    autoComplete="address-line1"
                     value={street}
                     onChange={(e) => setStreet(e.target.value)}
                     required
@@ -305,6 +373,7 @@ export function CheckoutForm({
                 <Label htmlFor="complement">Complemento</Label>
                 <Input
                   id="complement"
+                  autoComplete="address-line2"
                   value={complement}
                   onChange={(e) => setComplement(e.target.value)}
                 />
@@ -322,6 +391,8 @@ export function CheckoutForm({
                   <Label htmlFor="zip">CEP</Label>
                   <Input
                     id="zip"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
                     value={zip}
                     onChange={(e) => setZip(e.target.value)}
                     required
@@ -412,6 +483,7 @@ export function CheckoutForm({
               Cartão
             </Button>
           </div>
+          {paymentMethod === "pix" ? <PixInfo /> : null}
         </fieldset>
       </div>
 
