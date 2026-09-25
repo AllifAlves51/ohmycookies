@@ -114,3 +114,7 @@ export function updateProduct(
     .select()
     .single<Product>()
 }
+
+export function deleteProduct(supabase: SupabaseClient, productId: string) {
+  return supabase.from("products").delete().eq("id", productId)
+}

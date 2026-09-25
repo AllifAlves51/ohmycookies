@@ -15,6 +15,7 @@ import {
   updateCategory,
   createProduct,
   updateProduct,
+  deleteProduct,
   getProductById,
 } from "@/lib/services/product"
 
@@ -264,6 +265,24 @@ export async function toggleProductActiveAction(
   }
 
   await updateProduct(supabase, productId, { active })
+  revalidatePath("/produtos")
+}
+
+export async function deleteProductAction(productId: string) {
+  const supabase = await createClient()
+  const store = await requireOwnedStore(supabase)
+
+  if (!store) {
+    return
+  }
+
+  const { data: product } = await getProductById(supabase, productId)
+
+  if (!product || product.store_id !== store.id) {
+    return
+  }
+
+  await deleteProduct(supabase, productId)
   revalidatePath("/produtos")
 }
 

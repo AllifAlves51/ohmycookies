@@ -1,10 +1,11 @@
 "use client"
 
 import { useTransition } from "react"
-import { Copy, Pencil } from "lucide-react"
+import { Copy, Pencil, Trash2 } from "lucide-react"
 import {
   toggleProductActiveAction,
   duplicateProductAction,
+  deleteProductAction,
 } from "@/app/(admin)/produtos/actions"
 import type { Category, Product } from "@/lib/services/product"
 import { formatBRL } from "@/lib/utils/money"
@@ -12,6 +13,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { ProductFormDialog } from "@/components/admin/products/product-form-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 function ProductRow({
   product,
@@ -22,6 +34,7 @@ function ProductRow({
 }) {
   const [isTogglePending, startToggleTransition] = useTransition()
   const [isDuplicatePending, startDuplicateTransition] = useTransition()
+  const [isDeletePending, startDeleteTransition] = useTransition()
 
   return (
     <div className="flex flex-col gap-2 border-b px-1 py-3 last:border-b-0 sm:flex-row sm:items-center sm:gap-3">
@@ -91,6 +104,44 @@ function ProductRow({
             )
           }
         />
+
+        <AlertDialog>
+          <AlertDialogTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="text-destructive"
+                aria-label={`Excluir ${product.name}`}
+                disabled={isDeletePending}
+              />
+            }
+          >
+            <Trash2 />
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir {product.name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Essa ação não pode ser desfeita. O produto some do cardápio
+                público imediatamente. Pedidos antigos que já incluíam esse
+                item continuam intactos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-white hover:bg-destructive/90"
+                onClick={() =>
+                  startDeleteTransition(() => deleteProductAction(product.id))
+                }
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
