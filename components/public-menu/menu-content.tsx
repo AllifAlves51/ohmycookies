@@ -30,7 +30,7 @@ export function MenuContent({
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="w-full gap-0">
-      <TabsList className="bg-background/95 sticky top-0 z-10 w-full justify-start overflow-x-auto backdrop-blur-sm">
+      <TabsList className="bg-background/95 sticky top-14 z-10 w-full justify-start overflow-x-auto backdrop-blur-sm">
         <TabsTrigger
           value={ALL_TAB}
           className="data-active:bg-primary data-active:text-primary-foreground"
