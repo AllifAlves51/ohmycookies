@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { getStoreByOwnerId, getStoreSettings } from "@/lib/services/store"
 import { getDeliveryZones } from "@/lib/services/delivery"
-import { isMapsConfigured } from "@/lib/services/maps"
+import { isMapsConfigured, isMapsClientConfigured } from "@/lib/services/maps"
 import { DeliverySettingsForm } from "@/components/admin/delivery/delivery-settings-form"
 import { DeliveryZoneRow } from "@/components/admin/delivery/delivery-zone-row"
 import { NewDeliveryZoneForm } from "@/components/admin/delivery/new-delivery-zone-form"
@@ -49,6 +49,7 @@ export default async function EntregaPage() {
         <DeliverySettingsForm
           settings={settings}
           mapsConfigured={isMapsConfigured()}
+          mapsClientConfigured={isMapsClientConfigured()}
         />
       ) : null}
 

@@ -12,6 +12,13 @@ export function isMapsConfigured() {
   return Boolean(process.env.GOOGLE_MAPS_SERVER_API_KEY)
 }
 
+/** The Maps JavaScript API key, used client-side to render the actual map
+ * widget (address confirmation on checkout) — distinct from the
+ * server-only key above, which only powers the geocode/distance lookups. */
+export function isMapsClientConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
+}
+
 export async function geocodeAddress(
   addressLine: string,
 ): Promise<LatLng | null> {

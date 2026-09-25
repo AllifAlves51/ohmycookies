@@ -34,9 +34,11 @@ function SubmitButton() {
 export function DeliverySettingsForm({
   settings,
   mapsConfigured,
+  mapsClientConfigured,
 }: {
   settings: StoreSettings
   mapsConfigured: boolean
+  mapsClientConfigured: boolean
 }) {
   const [state, formAction] = useActionState(
     updateDeliverySettingsAction,
@@ -107,9 +109,9 @@ export function DeliverySettingsForm({
                 Exibir mapa de confirmação de localização após digitar o
                 endereço de um pedido.
               </p>
-              {!mapsConfigured ? (
+              {!mapsClientConfigured ? (
                 <p className="text-destructive mt-1 text-xs">
-                  Requer a chave da API do Google Maps configurada
+                  Requer a chave pública da API do Google Maps configurada
                   (NEXT_PUBLIC_GOOGLE_MAPS_API_KEY).
                 </p>
               ) : null}
@@ -122,7 +124,7 @@ export function DeliverySettingsForm({
             <Switch
               id="addressMapConfirmationEnabled"
               checked={mapEnabled}
-              disabled={!mapsConfigured}
+              disabled={!mapsClientConfigured}
               onCheckedChange={setMapEnabled}
             />
           </div>
@@ -132,8 +134,9 @@ export function DeliverySettingsForm({
               <Lightbulb className="mt-0.5 size-4 shrink-0" />
               <p>
                 Importante: o cálculo de distância usa o trajeto real (via
-                Google Maps), não linha reta. Sem a chave configurada, o
-                cliente escolhe a faixa manualmente no checkout.
+                Google Maps), não linha reta. Sem a chave do servidor
+                configurada, o cliente escolhe a faixa manualmente no
+                checkout.
               </p>
             </div>
           ) : null}
