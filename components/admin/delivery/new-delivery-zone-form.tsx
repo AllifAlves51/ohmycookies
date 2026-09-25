@@ -2,6 +2,7 @@
 
 import { useActionState } from "react"
 import { useFormStatus } from "react-dom"
+import { Plus } from "lucide-react"
 import {
   createDeliveryZoneAction,
   type DeliveryActionState,
@@ -14,8 +15,9 @@ const initialState: DeliveryActionState = {}
 function AddButton() {
   const { pending } = useFormStatus()
   return (
-    <Button type="submit" size="sm" disabled={pending}>
-      {pending ? "Adicionando..." : "Adicionar região"}
+    <Button type="submit" size="sm" variant="outline" disabled={pending}>
+      <Plus />
+      {pending ? "Adicionando..." : "Novo raio"}
     </Button>
   )
 }
@@ -32,9 +34,16 @@ export function NewDeliveryZoneForm() {
       key={state.success}
       className="flex flex-wrap items-end gap-3 pt-3"
     >
-      <div className="min-w-32 flex-1 space-y-1">
-        <label className="text-muted-foreground text-xs">Região (bairro)</label>
-        <Input name="name" placeholder="Centro" required />
+      <div className="w-20 space-y-1">
+        <label className="text-muted-foreground text-xs">Raio (km)</label>
+        <Input
+          name="radiusKm"
+          type="number"
+          step="0.1"
+          min="0.1"
+          placeholder="5"
+          required
+        />
       </div>
       <div className="w-24 space-y-1">
         <label className="text-muted-foreground text-xs">Taxa (R$)</label>

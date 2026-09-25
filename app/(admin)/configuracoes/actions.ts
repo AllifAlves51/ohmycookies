@@ -16,6 +16,8 @@ import {
   updateStoreSettings,
   updateStoreLinks,
 } from "@/lib/services/store"
+import { geocodeAddress } from "@/lib/services/maps"
+import { formatAddress } from "@/lib/utils/address"
 
 export type SettingsActionState = {
   error?: string
@@ -77,6 +79,16 @@ export async function updateStoreInfoAction(
       return { error: "Esse link (slug) já está em uso por outra loja" }
     }
     return { error: "Não foi possível salvar. Tente novamente." }
+  }
+
+  // Best-effort: powers the km-radius delivery distance lookup. Silently
+  // skipped when the Google Maps server key isn't configured yet.
+  const coordinates = await geocodeAddress(formatAddress(parsed.data.address))
+  if (coordinates) {
+    await updateStoreSettings(supabase, store.id, {
+      latitude: coordinates.lat,
+      longitude: coordinates.lng,
+    })
   }
 
   revalidatePath("/configuracoes")

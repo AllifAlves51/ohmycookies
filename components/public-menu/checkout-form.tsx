@@ -1,11 +1,16 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
+import { MapPin } from "lucide-react"
 import { useCart } from "@/components/public-menu/cart-context"
 import type { DeliveryZone } from "@/lib/services/delivery"
 import { formatBRL } from "@/lib/utils/money"
 import type { WhatsappOrderSummary } from "@/lib/utils/whatsapp"
-import { submitOrderAction } from "@/app/(public)/cardapio/[slug]/actions"
+import {
+  submitOrderAction,
+  estimateDeliveryFeeAction,
+  type DeliveryEstimate,
+} from "@/app/(public)/cardapio/[slug]/actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -51,12 +56,61 @@ export function CheckoutForm({
   >("cash")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [estimate, setEstimate] = useState<DeliveryEstimate | null>(null)
+  const [isEstimating, setIsEstimating] = useState(false)
 
   const canOrder = pickupEnabled || deliveryEnabled
   const selectedZone = deliveryZones.find((zone) => zone.id === deliveryZoneId)
   const deliveryFeeCents =
-    fulfillmentType === "delivery" ? (selectedZone?.fee_cents ?? 0) : 0
+    fulfillmentType === "delivery"
+      ? (estimate?.feeCents ?? selectedZone?.fee_cents ?? 0)
+      : 0
   const totalCents = subtotalCents + deliveryFeeCents
+
+  const addressComplete =
+    fulfillmentType === "delivery" &&
+    street.trim() &&
+    number.trim() &&
+    neighborhood.trim() &&
+    city.trim() &&
+    uf.trim() &&
+    zip.trim()
+
+  // Tries to auto-detect the delivery zone from the real address once the
+  // customer finishes typing it; falls back to the manual Select below
+  // whenever Google Maps isn't configured or the lookup fails.
+  useEffect(() => {
+    if (!addressComplete) {
+      return
+    }
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      setIsEstimating(true)
+      estimateDeliveryFeeAction(storeSlug, {
+        street,
+        number,
+        neighborhood,
+        complement,
+        city,
+        state: uf,
+        zip,
+      })
+        .then((result) => {
+          if (cancelled) return
+          setEstimate(result)
+          if (result) setDeliveryZoneId(result.zoneId)
+        })
+        .finally(() => {
+          if (!cancelled) setIsEstimating(false)
+        })
+    }, 800)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [addressComplete, street, number, neighborhood, complement, city, uf, zip, storeSlug])
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -173,34 +227,6 @@ export function CheckoutForm({
 
         {fulfillmentType === "delivery" ? (
           <>
-            <div className="space-y-2">
-              <Label htmlFor="deliveryZoneId">Região de entrega</Label>
-              <Select
-                value={deliveryZoneId}
-                onValueChange={(value) => setDeliveryZoneId(value ?? "")}
-                items={deliveryZones.map((zone) => ({
-                  value: zone.id,
-                  label: `${zone.name} — ${formatBRL(zone.fee_cents)}`,
-                }))}
-              >
-                <SelectTrigger id="deliveryZoneId" className="w-full">
-                  <SelectValue placeholder="Selecione sua região" />
-                </SelectTrigger>
-                <SelectContent>
-                  {deliveryZones.map((zone) => (
-                    <SelectItem key={zone.id} value={zone.id}>
-                      {zone.name} — {formatBRL(zone.fee_cents)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {deliveryZones.length === 0 ? (
-                <p className="text-destructive text-xs">
-                  Nenhuma região de entrega disponível no momento.
-                </p>
-              ) : null}
-            </div>
-
             <fieldset className="space-y-3">
               <legend className="text-sm font-medium">Endereço</legend>
               <div className="grid grid-cols-[1fr_100px] gap-2">
@@ -271,6 +297,55 @@ export function CheckoutForm({
                 </div>
               </div>
             </fieldset>
+
+            {addressComplete && (estimate || isEstimating) ? (
+              <div className="bg-secondary flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm">
+                <MapPin className="text-primary size-4 shrink-0" />
+                {isEstimating ? (
+                  <span className="text-muted-foreground">
+                    Calculando distância...
+                  </span>
+                ) : estimate ? (
+                  <span>
+                    <span className="font-medium">{estimate.zoneName}</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      ({estimate.distanceKm} km) — {formatBRL(estimate.feeCents)}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+
+            {addressComplete && !isEstimating && !estimate ? (
+              <div className="space-y-2">
+                <Label htmlFor="deliveryZoneId">Região de entrega</Label>
+                <Select
+                  value={deliveryZoneId}
+                  onValueChange={(value) => setDeliveryZoneId(value ?? "")}
+                  items={deliveryZones.map((zone) => ({
+                    value: zone.id,
+                    label: `${zone.name} — ${formatBRL(zone.fee_cents)}`,
+                  }))}
+                >
+                  <SelectTrigger id="deliveryZoneId" className="w-full">
+                    <SelectValue placeholder="Selecione sua região" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deliveryZones.map((zone) => (
+                      <SelectItem key={zone.id} value={zone.id}>
+                        {zone.name} — {formatBRL(zone.fee_cents)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {deliveryZones.length === 0 ? (
+                  <p className="text-destructive text-xs">
+                    Nenhuma região de entrega disponível no momento.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </>
         ) : null}
 

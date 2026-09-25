@@ -5,7 +5,14 @@ function toNumber(value: string) {
 }
 
 export const deliveryZoneSchema = z.object({
-  name: z.string().trim().min(2, "Informe o nome da região"),
+  radiusKm: z
+    .string()
+    .trim()
+    .min(1, "Informe o raio em km")
+    .refine((v) => {
+      const n = toNumber(v)
+      return Number.isFinite(n) && n > 0
+    }, "Raio inválido"),
   fee: z
     .string()
     .trim()
@@ -26,3 +33,17 @@ export const deliveryZoneSchema = z.object({
 })
 
 export type DeliveryZoneInput = z.infer<typeof deliveryZoneSchema>
+
+export const deliverySettingsSchema = z.object({
+  orderPrepMinutes: z
+    .string()
+    .trim()
+    .refine((v) => {
+      const n = Number(v)
+      return Number.isInteger(n) && n >= 0
+    }, "Valor inválido"),
+  freeDeliveryThreshold: z.string().trim(),
+  addressMapConfirmationEnabled: z.boolean(),
+})
+
+export type DeliverySettingsInput = z.infer<typeof deliverySettingsSchema>

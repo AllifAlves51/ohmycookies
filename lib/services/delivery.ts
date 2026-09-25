@@ -6,6 +6,7 @@ export type DeliveryZone = {
   name: string
   fee_cents: number
   estimated_time_minutes: number
+  radius_km: number | null
   active: boolean
   position: number
   created_at: string
@@ -27,7 +28,7 @@ export function createDeliveryZone(
   storeId: string,
   patch: Pick<
     DeliveryZone,
-    "name" | "fee_cents" | "estimated_time_minutes" | "active"
+    "name" | "fee_cents" | "estimated_time_minutes" | "active" | "radius_km"
   >,
 ) {
   return supabase
@@ -43,9 +44,23 @@ export function updateDeliveryZone(
   patch: Partial<
     Pick<
       DeliveryZone,
-      "name" | "fee_cents" | "estimated_time_minutes" | "active"
+      "name" | "fee_cents" | "estimated_time_minutes" | "active" | "radius_km"
     >
   >,
 ) {
   return supabase.from("delivery_zones").update(patch).eq("id", zoneId)
+}
+
+/** The smallest active radius tier that still covers the given distance —
+ * mirrors how the km ranges in the admin table are meant to be read
+ * (each row is "up to X km"). */
+export function findZoneForDistanceKm(
+  zones: DeliveryZone[],
+  distanceKm: number,
+): DeliveryZone | null {
+  const tiers = zones
+    .filter((zone) => zone.active && zone.radius_km !== null)
+    .sort((a, b) => (a.radius_km ?? 0) - (b.radius_km ?? 0))
+
+  return tiers.find((zone) => distanceKm <= (zone.radius_km ?? 0)) ?? null
 }

@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
-import { getStoreByOwnerId } from "@/lib/services/store"
+import { getStoreByOwnerId, getStoreSettings } from "@/lib/services/store"
 import { getDeliveryZones } from "@/lib/services/delivery"
+import { isMapsConfigured } from "@/lib/services/maps"
+import { DeliverySettingsForm } from "@/components/admin/delivery/delivery-settings-form"
 import { DeliveryZoneRow } from "@/components/admin/delivery/delivery-zone-row"
 import { NewDeliveryZoneForm } from "@/components/admin/delivery/new-delivery-zone-form"
 import {
@@ -33,33 +35,45 @@ export default async function EntregaPage() {
     )
   }
 
-  const { data: zones } = await getDeliveryZones(supabase, store.id)
+  const [{ data: zones }, { data: settings }] = await Promise.all([
+    getDeliveryZones(supabase, store.id),
+    getStoreSettings(supabase, store.id),
+  ])
   const allZones = zones ?? []
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-2xl font-semibold">Entrega</h1>
 
+      {settings ? (
+        <DeliverySettingsForm
+          settings={settings}
+          mapsConfigured={isMapsConfigured()}
+        />
+      ) : null}
+
       <Card>
         <CardHeader>
-          <CardTitle>Regiões de entrega</CardTitle>
+          <CardTitle>Raio de quilometragem</CardTitle>
           <CardDescription>
-            O cliente escolhe a região dele no checkout e a taxa correspondente
-            é aplicada ao pedido.
+            Nosso sistema mede a distância do trajeto real, não em linha reta
+            do ponto A ao B — quando a chave do Google Maps estiver
+            configurada. Sem ela, o cliente escolhe a faixa manualmente no
+            checkout.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {allZones.length > 0 ? (
             <div className="hidden grid-cols-[1fr_140px_140px_auto_auto] gap-3 pb-2 text-xs font-medium sm:grid">
-              <span>Região</span>
+              <span>Raio</span>
               <span>Taxa</span>
               <span>Prazo</span>
-              <span>Ativo</span>
+              <span>Atendimento</span>
               <span />
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">
-              Nenhuma região cadastrada ainda.
+              Nenhuma faixa cadastrada ainda.
             </p>
           )}
 

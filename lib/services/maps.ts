@@ -1,0 +1,63 @@
+export type LatLng = { lat: number; lng: number }
+
+const GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
+const DISTANCE_MATRIX_URL =
+  "https://maps.googleapis.com/maps/api/distancematrix/json"
+
+/** Whether the server-side Google Maps integration (Geocoding +
+ * Distance Matrix) has an API key configured. Every function below is a
+ * no-op returning null when it doesn't — callers fall back to manual
+ * zone selection instead of crashing. */
+export function isMapsConfigured() {
+  return Boolean(process.env.GOOGLE_MAPS_SERVER_API_KEY)
+}
+
+export async function geocodeAddress(
+  addressLine: string,
+): Promise<LatLng | null> {
+  const apiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY
+  if (!apiKey) return null
+
+  const url = new URL(GEOCODE_URL)
+  url.searchParams.set("address", addressLine)
+  url.searchParams.set("region", "br")
+  url.searchParams.set("key", apiKey)
+
+  try {
+    const res = await fetch(url.toString())
+    if (!res.ok) return null
+    const data = await res.json()
+    const location = data?.results?.[0]?.geometry?.location
+    if (typeof location?.lat !== "number" || typeof location?.lng !== "number") {
+      return null
+    }
+    return { lat: location.lat, lng: location.lng }
+  } catch {
+    return null
+  }
+}
+
+/** Real route distance (not straight-line) between two points, in km. */
+export async function getRouteDistanceKm(
+  origin: LatLng,
+  destination: LatLng,
+): Promise<number | null> {
+  const apiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY
+  if (!apiKey) return null
+
+  const url = new URL(DISTANCE_MATRIX_URL)
+  url.searchParams.set("origins", `${origin.lat},${origin.lng}`)
+  url.searchParams.set("destinations", `${destination.lat},${destination.lng}`)
+  url.searchParams.set("key", apiKey)
+
+  try {
+    const res = await fetch(url.toString())
+    if (!res.ok) return null
+    const data = await res.json()
+    const element = data?.rows?.[0]?.elements?.[0]
+    if (element?.status !== "OK") return null
+    return element.distance.value / 1000
+  } catch {
+    return null
+  }
+}

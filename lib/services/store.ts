@@ -26,6 +26,9 @@ export type StoreSettings = {
   delivery_enabled: boolean
   latitude: number | null
   longitude: number | null
+  free_delivery_threshold_cents: number | null
+  order_prep_minutes: number
+  address_map_confirmation_enabled: boolean
 }
 
 export function getStoreByOwnerId(supabase: SupabaseClient, ownerId: string) {
@@ -99,7 +102,14 @@ export function updateStoreSettings(
   patch: Partial<
     Pick<
       StoreSettings,
-      "min_order_cents" | "pickup_enabled" | "delivery_enabled"
+      | "min_order_cents"
+      | "pickup_enabled"
+      | "delivery_enabled"
+      | "latitude"
+      | "longitude"
+      | "free_delivery_threshold_cents"
+      | "order_prep_minutes"
+      | "address_map_confirmation_enabled"
     >
   >,
 ) {

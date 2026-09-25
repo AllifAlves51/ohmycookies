@@ -1,8 +1,15 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { getStoreBySlug } from "@/lib/services/store"
+import { getStoreBySlug, getStoreSettings } from "@/lib/services/store"
 import { getOrderTracking, type OrderTracking } from "@/lib/services/order"
+import {
+  getDeliveryZones,
+  findZoneForDistanceKm,
+} from "@/lib/services/delivery"
+import { isMapsConfigured, geocodeAddress, getRouteDistanceKm } from "@/lib/services/maps"
+import { formatAddress } from "@/lib/utils/address"
+import type { AddressInput } from "@/lib/validations/store"
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations/checkout"
 
 export type CheckoutState = {
@@ -84,6 +91,54 @@ export async function submitOrderAction(
   })
 
   return { success: true, orderNumber: orderNumber ?? undefined, orderId }
+}
+
+export type DeliveryEstimate = {
+  zoneId: string
+  zoneName: string
+  feeCents: number
+  etaMinutes: number
+  distanceKm: number
+}
+
+/** Auto-picks the matching km-radius zone from the customer's real address
+ * via Google Maps. Returns null whenever anything in the chain is
+ * unavailable (no API key, store has no geocoded origin yet, address
+ * doesn't geocode, or it falls outside every configured radius) — the
+ * checkout form falls back to manual zone selection in that case. */
+export async function estimateDeliveryFeeAction(
+  storeSlug: string,
+  address: AddressInput,
+): Promise<DeliveryEstimate | null> {
+  if (!isMapsConfigured()) return null
+
+  const supabase = await createClient()
+  const { data: store } = await getStoreBySlug(supabase, storeSlug)
+  if (!store) return null
+
+  const { data: settings } = await getStoreSettings(supabase, store.id)
+  if (settings?.latitude == null || settings?.longitude == null) return null
+
+  const destination = await geocodeAddress(formatAddress(address))
+  if (!destination) return null
+
+  const distanceKm = await getRouteDistanceKm(
+    { lat: settings.latitude, lng: settings.longitude },
+    destination,
+  )
+  if (distanceKm === null) return null
+
+  const { data: zones } = await getDeliveryZones(supabase, store.id)
+  const zone = findZoneForDistanceKm(zones ?? [], distanceKm)
+  if (!zone) return null
+
+  return {
+    zoneId: zone.id,
+    zoneName: zone.name,
+    feeCents: zone.fee_cents,
+    etaMinutes: zone.estimated_time_minutes + (settings.order_prep_minutes ?? 0),
+    distanceKm: Math.round(distanceKm * 10) / 10,
+  }
 }
 
 export async function getOrderTrackingStatusAction(

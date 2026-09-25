@@ -34,15 +34,21 @@ export function DeliveryZoneRow({ zone }: { zone: DeliveryZone }) {
   return (
     <form
       action={formAction}
-      className="flex flex-wrap items-center gap-3 border-b py-3 last:border-b-0"
+      className="grid grid-cols-2 items-center gap-3 border-b py-3 last:border-b-0 sm:grid-cols-[1fr_140px_140px_auto_auto]"
     >
       <input type="hidden" name="zoneId" value={zone.id} />
-      <Input
-        name="name"
-        defaultValue={zone.name}
-        aria-label="Nome da região"
-        className="min-w-32 flex-1"
-      />
+      <div className="flex items-center gap-1">
+        <Input
+          name="radiusKm"
+          type="number"
+          step="0.1"
+          min="0.1"
+          defaultValue={zone.radius_km ?? ""}
+          aria-label="Raio em km"
+          className="w-20"
+        />
+        <span className="text-muted-foreground text-sm">km</span>
+      </div>
       <div className="flex items-center gap-1">
         <span className="text-muted-foreground text-sm">R$</span>
         <Input
@@ -78,10 +84,13 @@ export function DeliveryZoneRow({ zone }: { zone: DeliveryZone }) {
             )
           }
         />
+        <span className="text-muted-foreground text-xs sm:hidden">
+          {zone.active ? "Disponível" : "Indisponível"}
+        </span>
       </div>
       <SaveButton />
       {state.error ? (
-        <p className="text-destructive w-full text-sm" role="alert">
+        <p className="text-destructive col-span-full text-sm" role="alert">
           {state.error}
         </p>
       ) : null}

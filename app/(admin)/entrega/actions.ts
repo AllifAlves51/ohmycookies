@@ -4,8 +4,11 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/server"
 import { reaisToCents } from "@/lib/utils/money"
-import { deliveryZoneSchema } from "@/lib/validations/delivery"
-import { getStoreByOwnerId } from "@/lib/services/store"
+import {
+  deliveryZoneSchema,
+  deliverySettingsSchema,
+} from "@/lib/validations/delivery"
+import { getStoreByOwnerId, updateStoreSettings } from "@/lib/services/store"
 import { createDeliveryZone, updateDeliveryZone } from "@/lib/services/delivery"
 
 export type DeliveryActionState = {
@@ -28,7 +31,7 @@ async function requireOwnedStore(supabase: SupabaseClient) {
 
 function parseZoneFormData(formData: FormData) {
   return deliveryZoneSchema.safeParse({
-    name: formData.get("name"),
+    radiusKm: formData.get("radiusKm"),
     fee: formData.get("fee"),
     estimatedTimeMinutes: formData.get("estimatedTimeMinutes"),
     active: formData.get("active") === "on",
@@ -52,8 +55,11 @@ export async function createDeliveryZoneAction(
     return { error: "Loja não encontrada" }
   }
 
+  const radiusKm = Number(parsed.data.radiusKm.replace(",", "."))
+
   const { error } = await createDeliveryZone(supabase, store.id, {
-    name: parsed.data.name,
+    name: `Até ${radiusKm} km`,
+    radius_km: radiusKm,
     fee_cents: reaisToCents(parsed.data.fee),
     estimated_time_minutes: Number(parsed.data.estimatedTimeMinutes),
     active: parsed.data.active,
@@ -61,13 +67,13 @@ export async function createDeliveryZoneAction(
 
   if (error) {
     if (error.code === "23505") {
-      return { error: "Já existe uma região com esse nome" }
+      return { error: "Já existe uma faixa com esse raio" }
     }
-    return { error: "Não foi possível criar a região" }
+    return { error: "Não foi possível criar a faixa" }
   }
 
   revalidatePath("/entrega")
-  return { success: "Região criada" }
+  return { success: "Faixa criada" }
 }
 
 export async function updateDeliveryZoneAction(
@@ -77,7 +83,7 @@ export async function updateDeliveryZoneAction(
   const zoneId = formData.get("zoneId")
 
   if (typeof zoneId !== "string" || !zoneId) {
-    return { error: "Região inválida" }
+    return { error: "Faixa inválida" }
   }
 
   const parsed = parseZoneFormData(formData)
@@ -93,8 +99,11 @@ export async function updateDeliveryZoneAction(
     return { error: "Loja não encontrada" }
   }
 
+  const radiusKm = Number(parsed.data.radiusKm.replace(",", "."))
+
   const { error } = await updateDeliveryZone(supabase, zoneId, {
-    name: parsed.data.name,
+    name: `Até ${radiusKm} km`,
+    radius_km: radiusKm,
     fee_cents: reaisToCents(parsed.data.fee),
     estimated_time_minutes: Number(parsed.data.estimatedTimeMinutes),
     active: parsed.data.active,
@@ -102,13 +111,13 @@ export async function updateDeliveryZoneAction(
 
   if (error) {
     if (error.code === "23505") {
-      return { error: "Já existe uma região com esse nome" }
+      return { error: "Já existe uma faixa com esse raio" }
     }
     return { error: "Não foi possível salvar" }
   }
 
   revalidatePath("/entrega")
-  return { success: "Região atualizada" }
+  return { success: "Faixa atualizada" }
 }
 
 export async function toggleDeliveryZoneActiveAction(
@@ -124,4 +133,42 @@ export async function toggleDeliveryZoneActiveAction(
 
   await updateDeliveryZone(supabase, zoneId, { active })
   revalidatePath("/entrega")
+}
+
+export async function updateDeliverySettingsAction(
+  _prevState: DeliveryActionState,
+  formData: FormData,
+): Promise<DeliveryActionState> {
+  const parsed = deliverySettingsSchema.safeParse({
+    orderPrepMinutes: formData.get("orderPrepMinutes"),
+    freeDeliveryThreshold: formData.get("freeDeliveryThreshold") ?? "",
+    addressMapConfirmationEnabled:
+      formData.get("addressMapConfirmationEnabled") === "on",
+  })
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" }
+  }
+
+  const supabase = await createClient()
+  const store = await requireOwnedStore(supabase)
+
+  if (!store) {
+    return { error: "Loja não encontrada" }
+  }
+
+  const threshold = parsed.data.freeDeliveryThreshold.trim()
+
+  const { error } = await updateStoreSettings(supabase, store.id, {
+    order_prep_minutes: Number(parsed.data.orderPrepMinutes),
+    free_delivery_threshold_cents: threshold ? reaisToCents(threshold) : null,
+    address_map_confirmation_enabled: parsed.data.addressMapConfirmationEnabled,
+  })
+
+  if (error) {
+    return { error: "Não foi possível salvar. Tente novamente." }
+  }
+
+  revalidatePath("/entrega")
+  return { success: "Configurações de entrega atualizadas" }
 }
