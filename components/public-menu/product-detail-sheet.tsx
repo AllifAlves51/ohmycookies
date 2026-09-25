@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Minus, Plus } from "lucide-react"
+import { toast } from "sonner"
 import type { Product } from "@/lib/services/product"
 import { useCart } from "@/components/public-menu/cart-context"
 import { formatBRL } from "@/lib/utils/money"
@@ -18,7 +19,7 @@ export function ProductDetailSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const { addItem } = useCart()
+  const { addItem, openCart } = useCart()
   const [quantity, setQuantity] = useState(1)
   const [notes, setNotes] = useState("")
 
@@ -44,6 +45,12 @@ export function ProductDetailSheet({
     )
     reset()
     onOpenChange(false)
+    toast.success(`${product.name} adicionado`, {
+      action: {
+        label: "Ver carrinho",
+        onClick: openCart,
+      },
+    })
   }
 
   return (

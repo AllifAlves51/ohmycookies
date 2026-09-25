@@ -36,10 +36,12 @@ export async function geocodeAddress(
     const data = await res.json()
     const location = data?.results?.[0]?.geometry?.location
     if (typeof location?.lat !== "number" || typeof location?.lng !== "number") {
+      console.error("[maps] geocodeAddress failed", data?.status, data?.error_message)
       return null
     }
     return { lat: location.lat, lng: location.lng }
-  } catch {
+  } catch (err) {
+    console.error("[maps] geocodeAddress threw", err)
     return null
   }
 }
@@ -62,9 +64,18 @@ export async function getRouteDistanceKm(
     if (!res.ok) return null
     const data = await res.json()
     const element = data?.rows?.[0]?.elements?.[0]
-    if (element?.status !== "OK") return null
+    if (element?.status !== "OK") {
+      console.error(
+        "[maps] getRouteDistanceKm failed",
+        data?.status,
+        data?.error_message,
+        element?.status,
+      )
+      return null
+    }
     return element.distance.value / 1000
-  } catch {
+  } catch (err) {
+    console.error("[maps] getRouteDistanceKm threw", err)
     return null
   }
 }

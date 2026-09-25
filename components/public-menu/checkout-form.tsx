@@ -48,8 +48,8 @@ export function CheckoutForm({
   const [number, setNumber] = useState("")
   const [neighborhood, setNeighborhood] = useState("")
   const [complement, setComplement] = useState("")
-  const [city, setCity] = useState("")
-  const [uf, setUf] = useState("")
+  const [city] = useState("Primavera do Leste")
+  const [uf] = useState("MT")
   const [zip, setZip] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<
     "cash" | "pix" | "card"
@@ -271,22 +271,11 @@ export function CheckoutForm({
               <div className="grid grid-cols-[1fr_80px_120px] gap-2">
                 <div className="space-y-1">
                   <Label htmlFor="city">Cidade</Label>
-                  <Input
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    required
-                  />
+                  <Input id="city" value={city} disabled />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="uf">UF</Label>
-                  <Input
-                    id="uf"
-                    value={uf}
-                    onChange={(e) => setUf(e.target.value)}
-                    maxLength={2}
-                    required
-                  />
+                  <Input id="uf" value={uf} disabled />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="zip">CEP</Label>
@@ -298,6 +287,9 @@ export function CheckoutForm({
                   />
                 </div>
               </div>
+              <p className="text-muted-foreground text-xs">
+                No momento entregamos apenas em Primavera do Leste - MT.
+              </p>
             </fieldset>
 
             {addressComplete && (estimate || isEstimating) ? (
