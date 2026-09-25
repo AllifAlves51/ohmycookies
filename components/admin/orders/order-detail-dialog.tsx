@@ -302,6 +302,12 @@ export function OrderDetailDialog({
                 <span className="text-muted-foreground">Frete</span>
                 <span>{formatBRL(order.delivery_fee_cents)}</span>
               </div>
+              {order.discount_cents > 0 ? (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Desconto</span>
+                  <span>-{formatBRL(order.discount_cents)}</span>
+                </div>
+              ) : null}
               <div className="flex justify-between font-semibold">
                 <span>Total</span>
                 <span>{formatBRL(order.total_cents)}</span>

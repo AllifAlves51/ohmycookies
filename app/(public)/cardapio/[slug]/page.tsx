@@ -11,6 +11,8 @@ import { MenuContent } from "@/components/public-menu/menu-content"
 import { CartProvider } from "@/components/public-menu/cart-context"
 import { CartBar } from "@/components/public-menu/cart-bar"
 import { BottomNav } from "@/components/public-menu/bottom-nav"
+import { FloatingCartButton } from "@/components/public-menu/floating-cart-button"
+import { OrderHistorySheet } from "@/components/public-menu/order-history-sheet"
 
 export default async function CardapioPage({
   params,
@@ -55,6 +57,8 @@ export default async function CardapioPage({
           deliveryEnabled={settings?.delivery_enabled ?? false}
           deliveryZones={deliveryZones ?? []}
         />
+        <OrderHistorySheet storeSlug={store.slug} />
+        <FloatingCartButton />
         <BottomNav />
       </div>
     </CartProvider>

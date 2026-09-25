@@ -17,6 +17,7 @@ export type CheckoutState = {
   success?: boolean
   orderNumber?: number
   orderId?: string
+  discountCents?: number
 }
 
 export async function submitOrderAction(
@@ -91,7 +92,44 @@ export async function submitOrderAction(
     p_order_id: orderId,
   })
 
-  return { success: true, orderNumber: orderNumber ?? undefined, orderId }
+  let discountCents = 0
+  if (parsed.data.couponCode) {
+    const { data } = await supabase.rpc("apply_coupon_to_order", {
+      p_order_id: orderId,
+      p_code: parsed.data.couponCode,
+    })
+    discountCents = data ?? 0
+  }
+
+  return {
+    success: true,
+    orderNumber: orderNumber ?? undefined,
+    orderId,
+    discountCents,
+  }
+}
+
+/** Live preview shown in the checkout form before the order is submitted
+ * — doesn't touch usage_count. The authoritative discount is recomputed
+ * server-side again at submit time via apply_coupon_to_order, so a stale
+ * preview (e.g. someone else used the last slot in the meantime) can
+ * never overcharge or undercharge the order. */
+export async function previewCouponAction(
+  storeSlug: string,
+  code: string,
+  subtotalCents: number,
+): Promise<number> {
+  const supabase = await createClient()
+  const { data: store } = await getStoreBySlug(supabase, storeSlug)
+  if (!store) return 0
+
+  const { data } = await supabase.rpc("preview_coupon", {
+    p_store_id: store.id,
+    p_code: code,
+    p_subtotal_cents: subtotalCents,
+  })
+
+  return data ?? 0
 }
 
 export type DeliveryEstimate = {
@@ -148,4 +186,29 @@ export async function getOrderTrackingStatusAction(
   const supabase = await createClient()
   const { data } = await getOrderTracking(supabase, orderId)
   return data
+}
+
+export type OrderHistoryEntry = OrderTracking & { orderId: string }
+
+/** Looks up the current status/total for a list of order ids the customer's
+ * browser remembers locally — reuses the same public tracking RPC as the
+ * single-order page, so it only ever reveals what that page already would
+ * (nothing is enumerable without already knowing the order's UUID). */
+export async function getOrderHistoryAction(
+  orderIds: string[],
+): Promise<OrderHistoryEntry[]> {
+  const supabase = await createClient()
+
+  const results = await Promise.all(
+    orderIds.map(async (orderId) => {
+      const { data } = await getOrderTracking(supabase, orderId)
+      return data ? { ...data, orderId } : null
+    }),
+  )
+
+  return results
+    .filter((entry): entry is OrderHistoryEntry => entry !== null)
+    .sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
 }

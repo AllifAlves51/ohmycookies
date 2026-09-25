@@ -4,6 +4,7 @@ import { getStoreByOwnerId } from "@/lib/services/store"
 import { SidebarNav } from "@/components/admin/sidebar-nav"
 import { MobileNav } from "@/components/admin/mobile-nav"
 import { LogoutButton } from "@/components/shared/logout-button"
+import { NewOrderAlert } from "@/components/admin/new-order-alert"
 
 export default async function AdminLayout({ children }: LayoutProps<"/">) {
   const supabase = await createClient()
@@ -20,6 +21,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-full">
+      {store ? <NewOrderAlert storeId={store.id} /> : null}
       <aside className="bg-sidebar text-sidebar-foreground hidden w-64 shrink-0 flex-col border-r p-4 md:flex">
         <div className="mb-6 flex items-center gap-2 px-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}

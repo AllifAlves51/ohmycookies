@@ -9,6 +9,7 @@ import {
   Users,
   BarChart3,
   Bike,
+  Tag,
   Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/entrega", label: "Entrega", icon: Bike },
+  { href: "/cupons", label: "Cupons", icon: Tag },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const
 

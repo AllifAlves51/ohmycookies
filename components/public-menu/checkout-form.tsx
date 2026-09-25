@@ -5,10 +5,12 @@ import { MapPin } from "lucide-react"
 import { useCart } from "@/components/public-menu/cart-context"
 import type { DeliveryZone } from "@/lib/services/delivery"
 import { formatBRL } from "@/lib/utils/money"
+import { rememberOrder } from "@/lib/utils/order-history"
 import type { WhatsappOrderSummary } from "@/lib/utils/whatsapp"
 import {
   submitOrderAction,
   estimateDeliveryFeeAction,
+  previewCouponAction,
   type DeliveryEstimate,
 } from "@/app/(public)/cardapio/[slug]/actions"
 import { Button } from "@/components/ui/button"
@@ -58,6 +60,13 @@ export function CheckoutForm({
   const [isPending, startTransition] = useTransition()
   const [estimate, setEstimate] = useState<DeliveryEstimate | null>(null)
   const [isEstimating, setIsEstimating] = useState(false)
+  const [couponInput, setCouponInput] = useState("")
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string
+    discountCents: number
+  } | null>(null)
+  const [isCheckingCoupon, setIsCheckingCoupon] = useState(false)
+  const [couponError, setCouponError] = useState<string | null>(null)
 
   const canOrder = pickupEnabled || deliveryEnabled
   const selectedZone = deliveryZones.find((zone) => zone.id === deliveryZoneId)
@@ -65,7 +74,32 @@ export function CheckoutForm({
     fulfillmentType === "delivery"
       ? (estimate?.feeCents ?? selectedZone?.fee_cents ?? 0)
       : 0
-  const totalCents = subtotalCents + deliveryFeeCents
+  const discountCents = appliedCoupon?.discountCents ?? 0
+  const totalCents = subtotalCents + deliveryFeeCents - discountCents
+
+  function handleApplyCoupon() {
+    const code = couponInput.trim()
+    if (!code) return
+
+    setCouponError(null)
+    setIsCheckingCoupon(true)
+    previewCouponAction(storeSlug, code, subtotalCents)
+      .then((discount) => {
+        if (discount > 0) {
+          setAppliedCoupon({ code, discountCents: discount })
+        } else {
+          setAppliedCoupon(null)
+          setCouponError("Cupom inválido, expirado ou esgotado")
+        }
+      })
+      .finally(() => setIsCheckingCoupon(false))
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null)
+    setCouponInput("")
+    setCouponError(null)
+  }
 
   const addressComplete =
     fulfillmentType === "delivery" &&
@@ -134,12 +168,19 @@ export function CheckoutForm({
           notes: item.notes,
         })),
         paymentMethod,
+        couponCode: appliedCoupon?.code,
       })
 
       if (result.error) {
         setError(result.error)
         return
       }
+
+      if (result.orderId) {
+        rememberOrder(storeSlug, result.orderId)
+      }
+
+      const finalDiscountCents = result.discountCents ?? 0
 
       const summary: WhatsappOrderSummary = {
         orderId: result.orderId ?? "",
@@ -153,8 +194,8 @@ export function CheckoutForm({
         })),
         subtotalCents,
         deliveryFeeCents,
-        discountCents: 0,
-        totalCents,
+        discountCents: finalDiscountCents,
+        totalCents: subtotalCents + deliveryFeeCents - finalDiscountCents,
         fulfillmentType,
         address:
           fulfillmentType === "delivery"
@@ -375,6 +416,41 @@ export function CheckoutForm({
       </div>
 
       <div className="space-y-2 border-t p-4">
+        {appliedCoupon ? (
+          <div className="bg-secondary flex items-center justify-between rounded-xl px-3 py-2 text-sm">
+            <span>
+              Cupom <span className="font-medium">{appliedCoupon.code}</span> aplicado
+            </span>
+            <button
+              type="button"
+              onClick={handleRemoveCoupon}
+              className="text-primary text-xs font-medium"
+            >
+              Remover
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              value={couponInput}
+              onChange={(e) => setCouponInput(e.target.value)}
+              placeholder="Cupom de desconto"
+              className="uppercase"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isCheckingCoupon || !couponInput.trim()}
+              onClick={handleApplyCoupon}
+            >
+              {isCheckingCoupon ? "..." : "Aplicar"}
+            </Button>
+          </div>
+        )}
+        {couponError ? (
+          <p className="text-destructive text-xs">{couponError}</p>
+        ) : null}
+
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Subtotal</span>
           <span>{formatBRL(subtotalCents)}</span>
@@ -385,6 +461,12 @@ export function CheckoutForm({
               Entrega{selectedZone ? ` (${selectedZone.name})` : ""}
             </span>
             <span>{formatBRL(deliveryFeeCents)}</span>
+          </div>
+        ) : null}
+        {discountCents > 0 ? (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Desconto</span>
+            <span>-{formatBRL(discountCents)}</span>
           </div>
         ) : null}
         <div className="flex items-center justify-between font-semibold">

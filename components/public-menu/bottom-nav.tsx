@@ -10,7 +10,7 @@ function focusSearch() {
 }
 
 export function BottomNav() {
-  const { itemCount, openCart } = useCart()
+  const { openHistory } = useCart()
 
   return (
     <nav className="bg-background/95 fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-md items-center justify-around border-t py-2 backdrop-blur-sm">
@@ -34,16 +34,11 @@ export function BottomNav() {
       </button>
       <button
         type="button"
-        onClick={openCart}
-        className="text-muted-foreground relative flex flex-col items-center gap-0.5 text-xs"
+        onClick={openHistory}
+        className="text-muted-foreground flex flex-col items-center gap-0.5 text-xs"
       >
         <ClipboardList className="size-5" />
         Pedidos
-        {itemCount > 0 ? (
-          <span className="bg-primary absolute -top-1 right-2 flex size-4 items-center justify-center rounded-full text-[10px] font-semibold text-white">
-            {itemCount}
-          </span>
-        ) : null}
       </button>
     </nav>
   )

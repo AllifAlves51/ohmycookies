@@ -19,6 +19,7 @@ export const checkoutSchema = z
     deliveryZoneId: z.string().uuid().nullable(),
     address: addressSchema.nullable(),
     paymentMethod: z.enum(["cash", "pix", "card"]),
+    couponCode: z.string().trim().max(30).optional(),
     items: z.array(checkoutItemSchema).min(1, "Seu carrinho está vazio"),
   })
   .refine(
