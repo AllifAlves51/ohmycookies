@@ -8,6 +8,7 @@ export type CartItem = {
   unitPriceCents: number
   imageUrl: string | null
   quantity: number
+  notes?: string
 }
 
 type CartContextValue = {

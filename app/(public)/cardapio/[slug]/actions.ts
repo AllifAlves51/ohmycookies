@@ -76,6 +76,7 @@ export async function submitOrderAction(
       order_id: orderId,
       product_id: item.productId,
       quantity: item.quantity,
+      notes: item.notes || null,
     })),
   )
 

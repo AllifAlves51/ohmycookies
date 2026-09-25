@@ -131,6 +131,7 @@ export function CheckoutForm({
         items: items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
+          notes: item.notes,
         })),
         paymentMethod,
       })
@@ -148,6 +149,7 @@ export function CheckoutForm({
           name: item.name,
           quantity: item.quantity,
           unitPriceCents: item.unitPriceCents,
+          notes: item.notes,
         })),
         subtotalCents,
         deliveryFeeCents,

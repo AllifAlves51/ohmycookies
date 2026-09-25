@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { Search } from "lucide-react"
 import type { Category, Product } from "@/lib/services/product"
-import { ProductCard } from "@/components/public-menu/product-card"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { ProductListItem } from "@/components/public-menu/product-list-item"
+import { cn } from "@/lib/utils"
 
 const ALL_TAB = "all"
 
@@ -15,6 +16,7 @@ export function MenuContent({
   products: Product[]
 }) {
   const [tab, setTab] = useState(ALL_TAB)
+  const [search, setSearch] = useState("")
 
   if (products.length === 0) {
     return (
@@ -28,45 +30,69 @@ export function MenuContent({
     products.some((product) => product.category_id === category.id),
   )
 
+  const query = search.trim().toLowerCase()
+  const filtered = products.filter((product) => {
+    if (tab !== ALL_TAB && product.category_id !== tab) return false
+    if (query && !product.name.toLowerCase().includes(query)) return false
+    return true
+  })
+
   return (
-    <Tabs value={tab} onValueChange={setTab} className="w-full gap-0">
-      <TabsList className="bg-background/95 sticky top-14 z-10 w-full justify-start overflow-x-auto backdrop-blur-sm">
-        <TabsTrigger
-          value={ALL_TAB}
-          className="data-active:bg-primary data-active:text-primary-foreground"
+    <div>
+      <div className="px-4 pt-4">
+        <div className="relative">
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <input
+            id="cardapio-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pesquisar..."
+            className="border-input bg-card placeholder:text-muted-foreground w-full rounded-full border py-2.5 pr-4 pl-9 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
+        </div>
+      </div>
+
+      <div className="bg-background/95 sticky top-0 z-10 mt-3 flex gap-2 overflow-x-auto px-4 py-3 backdrop-blur-sm">
+        <button
+          type="button"
+          onClick={() => setTab(ALL_TAB)}
+          className={cn(
+            "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium",
+            tab === ALL_TAB
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground",
+          )}
         >
           Todos
-        </TabsTrigger>
+        </button>
         {categoriesWithProducts.map((category) => (
-          <TabsTrigger
+          <button
             key={category.id}
-            value={category.id}
-            className="data-active:bg-primary data-active:text-primary-foreground"
+            type="button"
+            onClick={() => setTab(category.id)}
+            className={cn(
+              "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium",
+              tab === category.id
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground",
+            )}
           >
             {category.name}
-          </TabsTrigger>
+          </button>
         ))}
-      </TabsList>
+      </div>
 
-      <TabsContent value={ALL_TAB} className="grid grid-cols-2 gap-3 px-4 pt-4">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </TabsContent>
-
-      {categoriesWithProducts.map((category) => (
-        <TabsContent
-          key={category.id}
-          value={category.id}
-          className="grid grid-cols-2 gap-3 px-4 pt-4"
-        >
-          {products
-            .filter((product) => product.category_id === category.id)
-            .map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-        </TabsContent>
-      ))}
-    </Tabs>
+      <div className="px-4 pb-4">
+        {filtered.length === 0 ? (
+          <p className="text-muted-foreground py-8 text-center text-sm">
+            Nenhum produto encontrado.
+          </p>
+        ) : (
+          filtered.map((product) => (
+            <ProductListItem key={product.id} product={product} />
+          ))
+        )}
+      </div>
+    </div>
   )
 }

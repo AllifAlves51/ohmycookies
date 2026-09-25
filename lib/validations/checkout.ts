@@ -4,6 +4,7 @@ import { addressSchema } from "@/lib/validations/store"
 const checkoutItemSchema = z.object({
   productId: z.string().uuid(),
   quantity: z.number().int().positive(),
+  notes: z.string().trim().max(280).optional(),
 })
 
 export const checkoutSchema = z

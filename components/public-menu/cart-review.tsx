@@ -37,6 +37,11 @@ export function CartReview({
               <p className="text-muted-foreground text-sm">
                 {formatBRL(item.unitPriceCents)}
               </p>
+              {item.notes ? (
+                <p className="text-muted-foreground truncate text-xs italic">
+                  {item.notes}
+                </p>
+              ) : null}
             </div>
             <QuantityStepper
               quantity={item.quantity}

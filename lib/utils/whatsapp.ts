@@ -8,6 +8,7 @@ export type WhatsappOrderItem = {
   name: string
   quantity: number
   unitPriceCents: number
+  notes?: string
 }
 
 export type WhatsappOrderSummary = {
@@ -36,6 +37,9 @@ export function buildOrderWhatsappMessage(order: WhatsappOrderSummary): string {
     lines.push(
       `${item.quantity}x ${item.name} — ${formatBRL(item.unitPriceCents * item.quantity)}`,
     )
+    if (item.notes) {
+      lines.push(`   _obs: ${item.notes}_`)
+    }
   }
   lines.push("")
   lines.push(`Subtotal: ${formatBRL(order.subtotalCents)}`)
