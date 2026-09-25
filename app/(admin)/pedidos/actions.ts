@@ -9,6 +9,7 @@ import {
   type OrderStatus,
   type PaymentPreference,
 } from "@/lib/services/order"
+import { notifyStatusChange, type NotifyResult } from "@/lib/whatsapp-bot"
 import {
   manualOrderSchema,
   type ManualOrderInput,
@@ -27,19 +28,40 @@ async function requireOwnedStore(supabase: SupabaseClient) {
   return store
 }
 
+/** Updates the status and, when the WhatsApp bot is connected, messages
+ * the customer. "sent" tells the panel not to offer the manual button. */
 export async function updateOrderStatusAction(
   orderId: string,
   status: OrderStatus,
-) {
+): Promise<{ notified: NotifyResult }> {
   const supabase = await createClient()
   const store = await requireOwnedStore(supabase)
 
   if (!store) {
-    return
+    return { notified: "unavailable" }
   }
 
-  await updateOrderStatus(supabase, orderId, status)
+  const { data: previous } = await supabase
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .eq("store_id", store.id)
+    .single<{ status: OrderStatus }>()
+
+  if (!previous) {
+    return { notified: "unavailable" }
+  }
+
+  const { error } = await updateOrderStatus(supabase, orderId, status)
   revalidatePath("/pedidos")
+
+  if (error) {
+    return { notified: "unavailable" }
+  }
+
+  return {
+    notified: await notifyStatusChange(orderId, previous.status, status),
+  }
 }
 
 export type ManualOrderActionState = {
@@ -179,12 +201,8 @@ export async function getOrderDetailAction(
   return {
     items: (itemRows ?? []).map((row) => {
       const productImage = row.products as unknown as
-        | { image_url: string | null }
-        | { image_url: string | null }[]
-        | null
-      const image = Array.isArray(productImage)
-        ? productImage[0]
-        : productImage
+        { image_url: string | null } | { image_url: string | null }[] | null
+      const image = Array.isArray(productImage) ? productImage[0] : productImage
       return {
         productName: row.product_name,
         quantity: row.quantity,
@@ -193,7 +211,8 @@ export async function getOrderDetailAction(
         imageUrl: image?.image_url ?? null,
       }
     }),
-    paymentStatus: (paymentRow?.status as "pending" | "paid" | undefined) ?? null,
+    paymentStatus:
+      (paymentRow?.status as "pending" | "paid" | undefined) ?? null,
     notes: order.notes,
     customerOrderCount: count ?? 0,
   }

@@ -127,17 +127,23 @@ export function KanbanBoard({
     }
   }, [storeId])
 
-  function handleDrop(orderId: string, status: OrderStatus) {
+  async function handleDrop(orderId: string, status: OrderStatus) {
     const order = orders.find((o) => o.id === orderId)
     if (!order || order.status === status) return
 
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
     )
-    void updateOrderStatusAction(orderId, status)
-
     const customer = order.customer
-    if (!customer?.whatsapp) return
+    const { notified } = await updateOrderStatusAction(orderId, status)
+
+    if (notified === "sent") {
+      toast.success(
+        `Pedido #${order.order_number}: cliente avisado no WhatsApp`,
+      )
+      return
+    }
+    if (notified !== "unavailable" || !customer?.whatsapp) return
 
     const message = buildStatusMessage({
       templates,
@@ -152,7 +158,7 @@ export function KanbanBoard({
     if (!message) return
 
     toast(`Pedido #${order.order_number} → ${STATUS_LABEL.get(status)}`, {
-      description: "Quer avisar o cliente pelo WhatsApp?",
+      description: "WhatsApp não conectado. Quer avisar o cliente manualmente?",
       // Stays until dismissed — the owner may need a moment before sending.
       duration: Infinity,
       closeButton: true,
@@ -283,7 +289,7 @@ export function KanbanBoard({
               onDragStart={setDraggingOrderId}
               onDrop={(dropStatus) => {
                 if (draggingOrderId) {
-                  handleDrop(draggingOrderId, dropStatus)
+                  void handleDrop(draggingOrderId, dropStatus)
                   setDraggingOrderId(null)
                 }
               }}

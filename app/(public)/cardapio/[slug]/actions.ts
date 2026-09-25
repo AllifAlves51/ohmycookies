@@ -1,5 +1,7 @@
 "use server"
 
+import { after } from "next/server"
+import { notifyNewOrder } from "@/lib/whatsapp-bot"
 import { createClient } from "@/lib/supabase/server"
 import { getStoreBySlug, getStoreSettings } from "@/lib/services/store"
 import { getOrderTracking, type OrderTracking } from "@/lib/services/order"
@@ -7,7 +9,11 @@ import {
   getDeliveryZones,
   findZoneForDistanceKm,
 } from "@/lib/services/delivery"
-import { isMapsConfigured, geocodeAddress, getRouteDistanceKm } from "@/lib/services/maps"
+import {
+  isMapsConfigured,
+  geocodeAddress,
+  getRouteDistanceKm,
+} from "@/lib/services/maps"
 import { formatAddress } from "@/lib/utils/address"
 import type { AddressInput } from "@/lib/validations/store"
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations/checkout"
@@ -101,6 +107,10 @@ export async function submitOrderAction(
     discountCents = data ?? 0
   }
 
+  // Confirmation to the customer + alert to the owner, once totals (and
+  // any coupon) are final. Doesn't delay the checkout response.
+  after(() => notifyNewOrder(orderId))
+
   return {
     success: true,
     orderNumber: orderNumber ?? undefined,
@@ -175,7 +185,8 @@ export async function estimateDeliveryFeeAction(
     zoneId: zone.id,
     zoneName: zone.name,
     feeCents: zone.fee_cents,
-    etaMinutes: zone.estimated_time_minutes + (settings.order_prep_minutes ?? 0),
+    etaMinutes:
+      zone.estimated_time_minutes + (settings.order_prep_minutes ?? 0),
     distanceKm: Math.round(distanceKm * 10) / 10,
   }
 }
@@ -209,6 +220,7 @@ export async function getOrderHistoryAction(
   return results
     .filter((entry): entry is OrderHistoryEntry => entry !== null)
     .sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     )
 }

@@ -225,9 +225,10 @@ export function WhatsappMessagesEditor({
           {meta.kind === "business" ? (
             <div className="bg-muted/60 space-y-2 rounded-lg p-3 text-xs">
               <p>
-                Sem conexão direta com o WhatsApp, esta mensagem é configurada
-                no próprio app <strong>WhatsApp Business</strong>. Copie o texto
-                abaixo (já com o link do cardápio) e cole lá.
+                Com o robô conectado, esta mensagem é enviada automaticamente.
+                Sem o robô, configure-a no app{" "}
+                <strong>WhatsApp Business</strong>: copie o texto (já com o link
+                do cardápio) e cole lá.
               </p>
               <Button
                 type="button"
@@ -241,8 +242,9 @@ export function WhatsappMessagesEditor({
             </div>
           ) : (
             <p className="text-muted-foreground text-xs">
-              Ao mudar o pedido para esta etapa, o painel oferece enviar esta
-              mensagem ao cliente pelo WhatsApp com um clique.
+              Ao mudar o pedido para esta etapa, o robô envia esta mensagem ao
+              cliente automaticamente. Sem o robô conectado, o painel oferece
+              enviar com um clique.
             </p>
           )}
         </section>

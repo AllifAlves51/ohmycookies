@@ -32,6 +32,11 @@ export type StoreSettings = {
   /** Raw jsonb — always read through resolveTemplates(). Absent until the
    * whatsapp_message_templates migration runs. */
   whatsapp_templates?: unknown
+  // WhatsApp bot — absent until the whatsapp_bot migration runs.
+  whatsapp_instance?: string | null
+  whatsapp_greeting_interval_minutes?: number
+  whatsapp_alert_number?: string | null
+  whatsapp_alerts_enabled?: boolean
 }
 
 export function getStoreByOwnerId(supabase: SupabaseClient, ownerId: string) {

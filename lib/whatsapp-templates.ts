@@ -26,7 +26,7 @@ export const TEMPLATE_META: {
     key: "greeting",
     label: "Saudação",
     description:
-      "Primeira mensagem quando um cliente te chama. Cole no WhatsApp Business em Ferramentas comerciais → Mensagem de saudação.",
+      "Resposta automática quando um cliente te chama (respeitando o intervalo configurado acima).",
     kind: "business",
     sampleCustomerMessage: "Olá, gostaria do cardápio!",
   },
@@ -34,14 +34,15 @@ export const TEMPLATE_META: {
     key: "away",
     label: "Ausência",
     description:
-      "Resposta fora do horário de funcionamento. Cole no WhatsApp Business em Ferramentas comerciais → Mensagem de ausência.",
+      "Enviada no lugar da saudação quando a loja está fora do horário de funcionamento.",
     kind: "business",
     sampleCustomerMessage: "Oi, vocês estão abertos?",
   },
   {
     key: "received",
     label: "Pedido recebido",
-    description: "Quando o pedido é reaberto ou volta para Novos.",
+    description:
+      "Enviada assim que o cliente finaliza o pedido no cardápio (e quando um pedido cancelado é reaberto).",
     kind: "status",
     sampleCustomerMessage: "Acabei de fazer meu pedido!",
   },

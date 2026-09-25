@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import {
   ChevronLeft,
   ChevronRight,
@@ -129,22 +130,27 @@ export function OrderDetailDialog({
   function changeStatus(newStatus: OrderStatus) {
     setStatus(newStatus)
     onStatusChange?.(order.id, newStatus)
-    setNotifyMessage(
-      order.customer?.whatsapp
-        ? buildStatusMessage({
-            templates,
-            status: newStatus,
-            fulfillmentType: order.fulfillment_type,
-            customerName: order.customer.name,
-            orderNumber: order.order_number,
-            trackingUrl: `${window.location.origin}${trackingPath}`,
-            menuUrl: `${window.location.origin}/cardapio/${storeSlug}`,
-            storeName,
-          })
-        : null,
-    )
+    setNotifyMessage(null)
+    const manualMessage = order.customer?.whatsapp
+      ? buildStatusMessage({
+          templates,
+          status: newStatus,
+          fulfillmentType: order.fulfillment_type,
+          customerName: order.customer.name,
+          orderNumber: order.order_number,
+          trackingUrl: `${window.location.origin}${trackingPath}`,
+          menuUrl: `${window.location.origin}/cardapio/${storeSlug}`,
+          storeName,
+        })
+      : null
     startTransition(async () => {
-      await updateOrderStatusAction(order.id, newStatus)
+      const { notified } = await updateOrderStatusAction(order.id, newStatus)
+      if (notified === "sent") {
+        toast.success("Cliente avisado no WhatsApp")
+      } else if (notified === "unavailable") {
+        // Bot not connected (or the send failed): offer the manual button.
+        setNotifyMessage(manualMessage)
+      }
       router.refresh()
     })
   }

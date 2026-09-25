@@ -3,6 +3,8 @@ import { getStoreByOwnerId, getStoreSettings } from "@/lib/services/store"
 import { resolveTemplates } from "@/lib/whatsapp-templates"
 import { getSiteUrl } from "@/lib/site"
 import { WhatsappMessagesEditor } from "@/components/admin/whatsapp/messages-editor"
+import { WhatsappConnectionCard } from "@/components/admin/whatsapp/connection-card"
+import { getWhatsappStatusAction } from "@/app/(admin)/whatsapp/actions"
 
 export const metadata = { title: "WhatsApp" }
 
@@ -28,7 +30,10 @@ export default async function WhatsappPage() {
     )
   }
 
-  const { data: settings } = await getStoreSettings(supabase, store.id)
+  const [{ data: settings }, status] = await Promise.all([
+    getStoreSettings(supabase, store.id),
+    getWhatsappStatusAction(),
+  ])
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 p-6">
@@ -38,6 +43,16 @@ export default async function WhatsappPage() {
           Personalize as mensagens enviadas aos seus clientes.
         </p>
       </div>
+      <WhatsappConnectionCard
+        initialStatus={status}
+        storeWhatsapp={store.whatsapp_number}
+        initialSettings={{
+          greetingIntervalMinutes:
+            settings?.whatsapp_greeting_interval_minutes ?? 90,
+          alertNumber: settings?.whatsapp_alert_number ?? "",
+          alertsEnabled: settings?.whatsapp_alerts_enabled ?? true,
+        }}
+      />
       <WhatsappMessagesEditor
         menuUrl={`${getSiteUrl()}/cardapio/${store.slug}`}
         storeName={store.name}
