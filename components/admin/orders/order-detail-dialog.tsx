@@ -9,6 +9,7 @@ import {
   Copy,
   MessageCircle,
   Trash2,
+  XCircle,
 } from "lucide-react"
 import {
   getOrderDetailAction,
@@ -26,7 +27,7 @@ import {
 } from "@/lib/services/order"
 import { formatBRL } from "@/lib/utils/money"
 import { formatAddress } from "@/lib/utils/address"
-import { buildWhatsappLink } from "@/lib/utils/whatsapp"
+import { buildStatusMessage, buildWhatsappLink } from "@/lib/utils/whatsapp"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -47,7 +48,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-const STAGES: OrderStatus[] = ["new", "preparing", "out_for_delivery", "completed"]
+const STAGES: OrderStatus[] = [
+  "new",
+  "preparing",
+  "out_for_delivery",
+  "completed",
+]
 const STATUS_LABEL = new Map(STATUS_COLUMNS.map((c) => [c.status, c.label]))
 
 function formatDateTime(iso: string) {
@@ -76,11 +82,14 @@ export function OrderDetailDialog({
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [status, setStatus] = useState(order.status)
+  // Set right after a status change so the owner can tell the customer.
+  const [notifyMessage, setNotifyMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect -- resyncs local optimistic status with the server-confirmed one each time the dialog reopens for this order.
     setStatus(order.status)
+    setNotifyMessage(null)
     getOrderDetailAction(order.id).then((result) => {
       setDetail(result)
       setNotes(result?.notes ?? "")
@@ -105,6 +114,17 @@ export function OrderDetailDialog({
 
   function changeStatus(newStatus: OrderStatus) {
     setStatus(newStatus)
+    setNotifyMessage(
+      order.customer?.whatsapp
+        ? buildStatusMessage({
+            customerName: order.customer.name,
+            orderNumber: order.order_number,
+            status: newStatus,
+            fulfillmentType: order.fulfillment_type,
+            trackingUrl: `${window.location.origin}${trackingPath}`,
+          })
+        : null,
+    )
     startTransition(async () => {
       await updateOrderStatusAction(order.id, newStatus)
       router.refresh()
@@ -188,15 +208,48 @@ export function OrderDetailDialog({
             </div>
           )}
 
-          {status !== "cancelled" ? (
-            <button
-              type="button"
-              onClick={() => changeStatus("cancelled")}
-              disabled={isPending}
-              className="text-destructive text-xs underline underline-offset-4"
-            >
-              Cancelar pedido
-            </button>
+          {notifyMessage !== null && order.customer?.whatsapp ? (
+            <div className="space-y-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm dark:border-green-900 dark:bg-green-950/40">
+              <p className="font-medium">
+                Avisar o cliente: {STATUS_LABEL.get(status)}
+              </p>
+              <Textarea
+                value={notifyMessage}
+                onChange={(e) => setNotifyMessage(e.target.value)}
+                rows={4}
+                className="bg-background"
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="flex-1 bg-green-600 text-white hover:bg-green-700"
+                  nativeButton={false}
+                  render={
+                    <a
+                      href={buildWhatsappLink(
+                        order.customer.whatsapp,
+                        notifyMessage,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setNotifyMessage(null)}
+                    />
+                  }
+                >
+                  <MessageCircle />
+                  Enviar pelo WhatsApp
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setNotifyMessage(null)}
+                >
+                  Agora não
+                </Button>
+              </div>
+            </div>
           ) : null}
 
           <div className="space-y-1 rounded-lg border p-3 text-sm">
@@ -277,7 +330,11 @@ export function OrderDetailDialog({
               <Button
                 type="button"
                 size="sm"
-                variant={detail?.paymentStatus === "pending" || !detail?.paymentStatus ? "default" : "outline"}
+                variant={
+                  detail?.paymentStatus === "pending" || !detail?.paymentStatus
+                    ? "default"
+                    : "outline"
+                }
                 disabled={isPending}
                 onClick={() => handleSetPaymentStatus("pending")}
               >
@@ -286,7 +343,9 @@ export function OrderDetailDialog({
               <Button
                 type="button"
                 size="sm"
-                variant={detail?.paymentStatus === "paid" ? "default" : "outline"}
+                variant={
+                  detail?.paymentStatus === "paid" ? "default" : "outline"
+                }
                 disabled={isPending}
                 onClick={() => handleSetPaymentStatus("paid")}
               >
@@ -359,6 +418,43 @@ export function OrderDetailDialog({
             </Button>
           </div>
 
+          {status !== "cancelled" ? (
+            <AlertDialog>
+              <AlertDialogTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-destructive w-full"
+                    disabled={isPending}
+                  />
+                }
+              >
+                <XCircle />
+                Cancelar pedido
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancelar este pedido?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    O pedido #{order.order_number} vai para a coluna Cancelados
+                    e deixa de contar nas vendas e relatórios. Ele continua no
+                    histórico e pode ser reaberto depois.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Voltar</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive hover:bg-destructive/90 text-white"
+                    onClick={() => changeStatus("cancelled")}
+                  >
+                    Cancelar pedido
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : null}
+
           <AlertDialog>
             <AlertDialogTrigger
               render={
@@ -376,14 +472,14 @@ export function OrderDetailDialog({
               <AlertDialogHeader>
                 <AlertDialogTitle>Excluir este pedido?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Essa ação não pode ser desfeita. O pedido #{order.order_number}{" "}
-                  será removido permanentemente.
+                  Essa ação não pode ser desfeita. O pedido #
+                  {order.order_number} será removido permanentemente.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction
-                  className="bg-destructive text-white hover:bg-destructive/90"
+                  className="bg-destructive hover:bg-destructive/90 text-white"
                   onClick={handleDelete}
                 >
                   Excluir

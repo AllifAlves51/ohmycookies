@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Search } from "lucide-react"
+import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import {
   STATUS_COLUMNS,
@@ -21,6 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { buildStatusMessage, buildWhatsappLink } from "@/lib/utils/whatsapp"
+
+const STATUS_LABEL = new Map(STATUS_COLUMNS.map((c) => [c.status, c.label]))
 
 type FulfillmentFilter = "all" | "delivery" | "pickup"
 type DateFilter = "today" | "7d" | "all"
@@ -109,12 +113,37 @@ export function KanbanBoard({
   }, [storeId])
 
   function handleDrop(orderId: string, status: OrderStatus) {
+    const order = orders.find((o) => o.id === orderId)
+    if (!order || order.status === status) return
+
     setOrders((prev) =>
-      prev.map((order) =>
-        order.id === orderId ? { ...order, status } : order,
-      ),
+      prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
     )
     void updateOrderStatusAction(orderId, status)
+
+    const customer = order.customer
+    if (!customer?.whatsapp) return
+
+    const message = buildStatusMessage({
+      customerName: customer.name,
+      orderNumber: order.order_number,
+      status,
+      fulfillmentType: order.fulfillment_type,
+      trackingUrl: `${window.location.origin}/cardapio/${storeSlug}/pedido/${order.id}`,
+    })
+    toast(`Pedido #${order.order_number} → ${STATUS_LABEL.get(status)}`, {
+      description: "Quer avisar o cliente pelo WhatsApp?",
+      duration: 10000,
+      action: {
+        label: "Avisar cliente",
+        onClick: () =>
+          window.open(
+            buildWhatsappLink(customer.whatsapp, message),
+            "_blank",
+            "noopener,noreferrer",
+          ),
+      },
+    })
   }
 
   const [draggingOrderId, setDraggingOrderId] = useState<string | null>(null)
@@ -123,12 +152,16 @@ export function KanbanBoard({
     const query = search.trim().toLowerCase()
 
     return orders.filter((order) => {
-      if (fulfillmentFilter !== "all" && order.fulfillment_type !== fulfillmentFilter) {
+      if (
+        fulfillmentFilter !== "all" &&
+        order.fulfillment_type !== fulfillmentFilter
+      ) {
         return false
       }
 
       if (dateFilter === "today" && !isToday(order.created_at)) return false
-      if (dateFilter === "7d" && !isWithinDays(order.created_at, 7)) return false
+      if (dateFilter === "7d" && !isWithinDays(order.created_at, 7))
+        return false
 
       if (query) {
         const haystack = [

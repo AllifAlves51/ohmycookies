@@ -6,6 +6,7 @@ import {
   type WhatsappOrderSummary,
 } from "@/lib/utils/whatsapp"
 import { Button } from "@/components/ui/button"
+import { PixInfo } from "@/components/public-menu/pix-info"
 
 export function OrderSuccess({
   summary,
@@ -46,6 +47,8 @@ export function OrderSuccess({
           </>
         ) : null}
       </div>
+
+      {summary.paymentMethod === "pix" ? <PixInfo className="w-full" /> : null}
 
       {whatsappLink ? (
         <Button
