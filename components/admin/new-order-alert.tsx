@@ -83,10 +83,23 @@ function playPhoneRing(context: AudioContext) {
   }
 }
 
+/** Plays the custom ringtone normalized to near full scale — sound-effect
+ * downloads are often mastered quietly, and a quiet alarm gets missed. */
 function playBuffer(context: AudioContext, buffer: AudioBuffer) {
+  let peak = 0
+  for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+    for (const sample of buffer.getChannelData(channel)) {
+      const level = Math.abs(sample)
+      if (level > peak) peak = level
+    }
+  }
+
   const source = context.createBufferSource()
   source.buffer = buffer
-  source.connect(context.destination)
+  const gain = context.createGain()
+  gain.gain.value = peak > 0 ? Math.min(0.95 / peak, 8) : 1
+  source.connect(gain)
+  gain.connect(context.destination)
   source.start()
 }
 
