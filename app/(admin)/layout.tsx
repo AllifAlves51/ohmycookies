@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { getStoreByOwnerId } from "@/lib/services/store"
@@ -5,6 +6,11 @@ import { SidebarNav } from "@/components/admin/sidebar-nav"
 import { MobileNav } from "@/components/admin/mobile-nav"
 import { LogoutButton } from "@/components/shared/logout-button"
 import { NewOrderAlert } from "@/components/admin/new-order-alert"
+
+export const metadata: Metadata = {
+  title: "Painel",
+  robots: { index: false, follow: false },
+}
 
 export default async function AdminLayout({ children }: LayoutProps<"/">) {
   const supabase = await createClient()

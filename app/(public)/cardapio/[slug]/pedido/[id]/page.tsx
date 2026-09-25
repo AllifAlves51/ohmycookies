@@ -1,8 +1,14 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { getStoreBySlug } from "@/lib/services/store"
 import { getOrderTracking, getOrderTrackingItems } from "@/lib/services/order"
 import { OrderTrackingView } from "@/components/public-menu/order-tracking-view"
+
+export const metadata: Metadata = {
+  title: "Acompanhe seu pedido",
+  robots: { index: false, follow: false },
+}
 
 export default async function OrderTrackingPage({
   params,
