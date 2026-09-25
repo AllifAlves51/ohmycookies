@@ -4,8 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { BellRing } from "lucide-react"
 import { toast } from "sonner"
-import { createClient } from "@/lib/supabase/client"
-import type { Order } from "@/lib/services/order"
+import { useOrderFeed } from "@/components/admin/use-order-feed"
 
 /** Keeps ringing until someone acknowledges it (click/key on the panel or
  * "Ver pedidos"), like a delivery-app tablet — capped so a forgotten tab
@@ -146,67 +145,49 @@ export function NewOrderAlert({ storeId }: { storeId: string }) {
     [stopRinging],
   )
 
-  useEffect(() => {
-    const supabase = createClient()
+  useOrderFeed(storeId, {
+    onInsert: (order) => {
+      startRinging(order.order_number)
 
-    const channel = supabase
-      .channel(`new-order-alert-${storeId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "orders",
-          filter: `store_id=eq.${storeId}`,
+      toast.success(`Novo pedido #${order.order_number}`, {
+        description: order.customer?.name
+          ? `${order.customer.name} acabou de fazer um pedido.`
+          : "Um cliente acabou de fazer um pedido.",
+        duration: Infinity,
+        closeButton: true,
+        action: {
+          label: "Ver pedidos",
+          onClick: () => {
+            stopRinging()
+            router.push("/pedidos")
+          },
         },
-        (payload) => {
-          const order = payload.new as Order
-          startRinging(order.order_number)
+      })
 
-          toast.success(`Novo pedido #${order.order_number}`, {
-            description: "Um cliente acabou de fazer um pedido.",
-            duration: Infinity,
-            closeButton: true,
-            action: {
-              label: "Ver pedidos",
-              onClick: () => {
-                stopRinging()
-                router.push("/pedidos")
-              },
-            },
-          })
+      if ("Notification" in window && Notification.permission === "granted") {
+        const notification = new Notification(
+          `🔔 Novo pedido #${order.order_number}`,
+          {
+            body: order.customer?.name
+              ? `${order.customer.name} acabou de fazer um pedido.`
+              : "Um cliente acabou de fazer um pedido.",
+            icon: "/icon-192.png",
+            tag: `order-${order.id}`,
+            // Stays on screen until clicked instead of fading out.
+            requireInteraction: true,
+          },
+        )
+        notification.onclick = () => {
+          stopRinging()
+          window.focus()
+          router.push("/pedidos")
+          notification.close()
+        }
+      }
 
-          if (
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            const notification = new Notification(
-              `🔔 Novo pedido #${order.order_number}`,
-              {
-                body: "Um cliente acabou de fazer um pedido.",
-                icon: "/icon-192.png",
-                tag: `order-${order.id}`,
-                // Stays on screen until clicked instead of fading out.
-                requireInteraction: true,
-              },
-            )
-            notification.onclick = () => {
-              stopRinging()
-              window.focus()
-              router.push("/pedidos")
-              notification.close()
-            }
-          }
-
-          router.refresh()
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [storeId, router, startRinging, stopRinging])
+      router.refresh()
+    },
+  })
 
   if (soundReady) return null
 

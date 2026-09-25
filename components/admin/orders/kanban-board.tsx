@@ -1,17 +1,17 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import {
   STATUS_COLUMNS,
-  getOrderWithCustomer,
-  type Order,
+  getOrders,
   type OrderStatus,
   type OrderWithCustomer,
 } from "@/lib/services/order"
 import { updateOrderStatusAction } from "@/app/(admin)/pedidos/actions"
+import { useOrderFeed } from "@/components/admin/use-order-feed"
 import { KanbanColumn } from "@/components/admin/orders/kanban-column"
 import { OrderDetailDialog } from "@/components/admin/orders/order-detail-dialog"
 import { Input } from "@/components/ui/input"
@@ -74,58 +74,25 @@ export function KanbanBoard({
     useState<FulfillmentFilter>("all")
   const [dateFilter, setDateFilter] = useState<DateFilter>("all")
 
-  useEffect(() => {
-    const supabase = createClient()
-
-    const channel = supabase
-      .channel(`orders-${storeId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter: `store_id=eq.${storeId}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newOrder = payload.new as Order
-            getOrderWithCustomer(supabase, newOrder.id).then(({ data }) => {
-              if (data) {
-                setOrders((prev) =>
-                  prev.some((o) => o.id === data.id) ? prev : [data, ...prev],
-                )
-              }
-            })
-          }
-
-          if (payload.eventType === "UPDATE") {
-            const updated = payload.new as Order
-            setOrders((prev) =>
-              prev.map((order) =>
-                order.id === updated.id ? { ...order, ...updated } : order,
-              ),
-            )
-          }
-        },
-      )
-      // Supabase can't apply a column filter to DELETE events (the old row
-      // only carries the primary key), so deletes need their own unfiltered
-      // listener; ids from other stores simply won't match anything here.
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "orders" },
-        (payload) => {
-          const removed = payload.old as { id?: string }
-          if (removed.id) handleOrderDeleted(removed.id)
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [storeId])
+  useOrderFeed(storeId, {
+    onInsert: (order) =>
+      setOrders((prev) =>
+        prev.some((o) => o.id === order.id) ? prev : [order, ...prev],
+      ),
+    onUpdate: (updated) =>
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === updated.id ? { ...order, ...updated } : order,
+        ),
+      ),
+    onDelete: (orderId) => handleOrderDeleted(orderId),
+    // Events may have been missed while disconnected: reload the list.
+    onResync: () => {
+      getOrders(createClient(), storeId).then(({ data }) => {
+        if (data) setOrders(data)
+      })
+    },
+  })
 
   async function handleDrop(orderId: string, status: OrderStatus) {
     const order = orders.find((o) => o.id === orderId)
