@@ -49,7 +49,11 @@ export default async function PedidosPage() {
           deliveryZones={deliveryZones ?? []}
         />
       </div>
-      <KanbanBoard storeId={store.id} initialOrders={orders ?? []} />
+      <KanbanBoard
+        storeId={store.id}
+        storeSlug={store.slug}
+        initialOrders={orders ?? []}
+      />
     </main>
   )
 }

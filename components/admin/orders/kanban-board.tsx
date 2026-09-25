@@ -48,9 +48,11 @@ function isWithinDays(iso: string, days: number) {
 
 export function KanbanBoard({
   storeId,
+  storeSlug,
   initialOrders,
 }: {
   storeId: string
+  storeSlug: string
   initialOrders: OrderWithCustomer[]
 }) {
   const [orders, setOrders] = useState(initialOrders)
@@ -208,6 +210,7 @@ export function KanbanBoard({
               headerClassName={headerClassName}
               columnClassName={columnClassName}
               orders={filteredOrders.filter((order) => order.status === status)}
+              storeSlug={storeSlug}
               onDragStart={setDraggingOrderId}
               onDrop={(dropStatus) => {
                 if (draggingOrderId) {

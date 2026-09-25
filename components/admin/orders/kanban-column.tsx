@@ -11,6 +11,7 @@ export function KanbanColumn({
   headerClassName,
   columnClassName,
   orders,
+  storeSlug,
   onDragStart,
   onDrop,
 }: {
@@ -19,6 +20,7 @@ export function KanbanColumn({
   headerClassName: string
   columnClassName: string
   orders: OrderWithCustomer[]
+  storeSlug: string
   onDragStart: (orderId: string) => void
   onDrop: (status: OrderStatus) => void
 }) {
@@ -50,7 +52,12 @@ export function KanbanColumn({
       </div>
       <div className="flex min-h-16 flex-col gap-2">
         {orders.map((order) => (
-          <OrderCard key={order.id} order={order} onDragStart={onDragStart} />
+          <OrderCard
+            key={order.id}
+            order={order}
+            storeSlug={storeSlug}
+            onDragStart={onDragStart}
+          />
         ))}
       </div>
     </div>
