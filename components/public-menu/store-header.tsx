@@ -1,6 +1,11 @@
-import { AtSign, Share2, Globe } from "lucide-react"
+"use client"
+
+import { Menu, ShoppingBag } from "lucide-react"
 import type { Store } from "@/lib/services/store"
+import { useCart } from "@/components/public-menu/cart-context"
 import { Badge } from "@/components/ui/badge"
+import { SheetTrigger } from "@/components/ui/sheet"
+import { StoreInfoSheet } from "@/components/public-menu/store-info-sheet"
 
 export function StoreHeader({
   store,
@@ -9,66 +14,80 @@ export function StoreHeader({
   store: Store
   isOpen: boolean
 }) {
+  const { itemCount, openCart } = useCart()
+
   return (
-    <header className="bg-primary text-primary-foreground rounded-b-3xl px-5 pt-6 pb-8">
-      <div className="flex items-center gap-3">
+    <header className="relative overflow-hidden rounded-b-3xl">
+      {store.login_photo_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={store.login_photo_url}
+          alt=""
+          className="absolute inset-0 size-full object-cover"
+        />
+      ) : (
+        <div className="bg-primary absolute inset-0" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+
+      <div className="relative flex items-center justify-between p-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={store.logo_url ?? "/placeholder-image.svg"}
+          src={store.logo_url ?? "/logo.webp"}
           alt={store.name}
-          className="size-16 shrink-0 rounded-full border-2 border-white/50 bg-white/10 object-cover"
+          className="size-10 shrink-0 rounded-full border border-white/50 bg-white object-cover"
         />
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-semibold">{store.name}</h1>
-          <Badge
-            className={
-              isOpen
-                ? "bg-white/20 text-white"
-                : "bg-black/20 text-white/90"
-            }
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openCart}
+            aria-label="Ver carrinho"
+            className="relative flex size-9 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm"
           >
-            {isOpen ? "Aberto agora" : "Fechado no momento"}
-          </Badge>
+            <ShoppingBag className="size-4" />
+            {itemCount > 0 ? (
+              <span className="bg-primary absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full text-[10px] font-semibold text-white">
+                {itemCount}
+              </span>
+            ) : null}
+          </button>
+          <StoreInfoSheet
+            store={store}
+            trigger={
+              <SheetTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label="Menu"
+                    className="flex size-9 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm"
+                  />
+                }
+              >
+                <Menu className="size-4" />
+              </SheetTrigger>
+            }
+          />
         </div>
       </div>
 
-      {store.instagram_url || store.facebook_url || store.website_url ? (
-        <div className="mt-4 flex gap-3">
-          {store.instagram_url ? (
-            <a
-              href={store.instagram_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram"
-              className="flex size-8 items-center justify-center rounded-full bg-white/15"
-            >
-              <AtSign className="size-4" />
-            </a>
-          ) : null}
-          {store.facebook_url ? (
-            <a
-              href={store.facebook_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook"
-              className="flex size-8 items-center justify-center rounded-full bg-white/15"
-            >
-              <Share2 className="size-4" />
-            </a>
-          ) : null}
-          {store.website_url ? (
-            <a
-              href={store.website_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Site"
-              className="flex size-8 items-center justify-center rounded-full bg-white/15"
-            >
-              <Globe className="size-4" />
-            </a>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="relative space-y-1 px-5 pt-8 pb-8 text-white">
+        <h1 className="text-2xl leading-tight font-bold">
+          Seu momento pede
+          <br />
+          um cookie.
+        </h1>
+        <p className="max-w-[85%] text-sm text-white/90">
+          Cookies artesanais, feitos com muito amor e ingredientes
+          selecionados.
+        </p>
+        <Badge
+          className={
+            isOpen ? "mt-2 bg-white/20 text-white" : "mt-2 bg-black/30 text-white/90"
+          }
+        >
+          {isOpen ? "Aberto agora" : "Fechado no momento"}
+        </Badge>
+      </div>
     </header>
   )
 }

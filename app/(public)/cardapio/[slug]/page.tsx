@@ -37,7 +37,7 @@ export default async function CardapioPage({
 
   return (
     <CartProvider storeSlug={store.slug}>
-      <div className="mx-auto flex min-h-full w-full max-w-md flex-col pb-24">
+      <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
         <StoreHeader store={store} isOpen={isOpen} />
         <MenuContent categories={categories ?? []} products={products ?? []} />
         <CartBar

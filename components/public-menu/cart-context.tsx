@@ -18,6 +18,9 @@ type CartContextValue = {
   clear: () => void
   subtotalCents: number
   itemCount: number
+  isOpen: boolean
+  openCart: () => void
+  closeCart: () => void
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
@@ -35,6 +38,7 @@ export function CartProvider({
 }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [hydrated, setHydrated] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
   // Cart state starts empty (matching the server-rendered markup) and is
   // synchronized from localStorage once mounted in the browser — reading
@@ -115,6 +119,9 @@ export function CartProvider({
         clear,
         subtotalCents,
         itemCount,
+        isOpen,
+        openCart: () => setIsOpen(true),
+        closeCart: () => setIsOpen(false),
       }}
     >
       {children}

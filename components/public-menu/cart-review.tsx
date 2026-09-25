@@ -9,9 +9,11 @@ import { QuantityStepper } from "@/components/shared/quantity-stepper"
 export function CartReview({
   minOrderCents,
   onCheckout,
+  onAddMoreItems,
 }: {
   minOrderCents: number
   onCheckout: () => void
+  onAddMoreItems: () => void
 }) {
   const { items, subtotalCents, setQuantity, removeItem } = useCart()
   const belowMinimum = minOrderCents > 0 && subtotalCents < minOrderCents
@@ -51,6 +53,13 @@ export function CartReview({
             </Button>
           </div>
         ))}
+        <button
+          type="button"
+          onClick={onAddMoreItems}
+          className="text-primary w-full py-3 text-center text-sm font-medium"
+        >
+          Adicionar mais itens
+        </button>
       </div>
       <div className="space-y-2 border-t p-4">
         <div className="flex items-center justify-between text-sm">

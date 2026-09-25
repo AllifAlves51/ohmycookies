@@ -105,6 +105,10 @@ export function CheckoutForm({
             ? { street, number, neighborhood, complement, city, state: uf, zip }
             : null,
         paymentMethod,
+        estimatedMinutes:
+          fulfillmentType === "delivery"
+            ? (selectedZone?.estimated_time_minutes ?? null)
+            : null,
       }
 
       clear()
@@ -308,7 +312,9 @@ export function CheckoutForm({
         </div>
         {fulfillmentType === "delivery" ? (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Taxa de entrega</span>
+            <span className="text-muted-foreground">
+              Entrega{selectedZone ? ` (${selectedZone.name})` : ""}
+            </span>
             <span>{formatBRL(deliveryFeeCents)}</span>
           </div>
         ) : null}

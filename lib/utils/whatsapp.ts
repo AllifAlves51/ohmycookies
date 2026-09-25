@@ -22,6 +22,7 @@ export type WhatsappOrderSummary = {
   fulfillmentType: "delivery" | "pickup"
   address: AddressInput | null
   paymentMethod: PaymentPreference
+  estimatedMinutes: number | null
 }
 
 export function buildOrderWhatsappMessage(order: WhatsappOrderSummary): string {
