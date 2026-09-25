@@ -1,6 +1,7 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import { useActionState, useState, useRef } from "react"
+import { ImagePlus } from "lucide-react"
 import { useFormStatus } from "react-dom"
 import {
   createProductAction,
@@ -59,6 +60,10 @@ export function ProductFormDialog({
     product?.stock_control_enabled ?? false,
   )
   const [handledSuccess, setHandledSuccess] = useState(state.success)
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    product?.image_url ?? null,
+  )
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   if (state.success && state.success !== handledSuccess) {
     setHandledSuccess(state.success)
@@ -159,8 +164,50 @@ export function ProductFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image">Foto (máx. 4MB)</Label>
-            <Input id="image" name="image" type="file" accept="image/*" />
+            <Label>Foto do produto</Label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-muted hover:border-primary size-20 shrink-0 overflow-hidden rounded-xl border border-dashed"
+              >
+                {imagePreview ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={imagePreview}
+                    alt=""
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <ImagePlus className="text-muted-foreground mx-auto size-6" />
+                )}
+              </button>
+              <div className="space-y-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {imagePreview ? "Trocar foto" : "Adicionar foto"}
+                </Button>
+                <p className="text-muted-foreground text-xs">
+                  Aparece no cardápio público. Máx. 4MB.
+                </p>
+              </div>
+            </div>
+            <Input
+              ref={fileInputRef}
+              id="image"
+              name="image"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) setImagePreview(URL.createObjectURL(file))
+              }}
+            />
           </div>
 
           <div className="flex items-center gap-3">

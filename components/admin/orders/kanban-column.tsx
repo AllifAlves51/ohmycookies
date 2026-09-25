@@ -39,7 +39,7 @@ export function KanbanColumn({
         onDrop(status)
       }}
       className={cn(
-        "flex w-72 shrink-0 flex-col gap-2 rounded-xl border p-3",
+        "flex h-full w-72 shrink-0 flex-col gap-2 overflow-hidden rounded-xl border p-3",
         columnClassName,
         isOver && "border-primary",
       )}
@@ -50,7 +50,7 @@ export function KanbanColumn({
           ({orders.length})
         </span>
       </div>
-      <div className="flex min-h-16 flex-col gap-2">
+      <div className="flex min-h-16 flex-1 flex-col gap-2 overflow-y-auto">
         {orders.map((order) => (
           <OrderCard
             key={order.id}

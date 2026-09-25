@@ -200,7 +200,7 @@ export function KanbanBoard({
         </Select>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex h-[calc(100vh-220px)] min-h-80 gap-3 overflow-x-auto pb-2">
         {STATUS_COLUMNS.filter((column) => column.status !== "confirmed").map(
           ({ status, label, headerClassName, columnClassName }) => (
             <KanbanColumn

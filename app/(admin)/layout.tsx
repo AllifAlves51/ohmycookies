@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex min-h-full">
       {store ? <NewOrderAlert storeId={store.id} /> : null}
-      <aside className="bg-sidebar text-sidebar-foreground hidden w-64 shrink-0 flex-col border-r p-4 md:flex">
+      <aside className="bg-sidebar text-sidebar-foreground sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r p-4 md:flex">
         <div className="mb-6 flex items-center gap-2 px-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
