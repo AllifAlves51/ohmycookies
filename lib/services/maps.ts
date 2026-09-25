@@ -23,7 +23,10 @@ export async function geocodeAddress(
   addressLine: string,
 ): Promise<LatLng | null> {
   const apiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY
-  if (!apiKey) return null
+  if (!apiKey) {
+    console.error("[maps] geocodeAddress: GOOGLE_MAPS_SERVER_API_KEY is not set")
+    return null
+  }
 
   const url = new URL(GEOCODE_URL)
   url.searchParams.set("address", addressLine)
@@ -32,7 +35,10 @@ export async function geocodeAddress(
 
   try {
     const res = await fetch(url.toString())
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.error("[maps] geocodeAddress: HTTP", res.status, await res.text())
+      return null
+    }
     const data = await res.json()
     const location = data?.results?.[0]?.geometry?.location
     if (typeof location?.lat !== "number" || typeof location?.lng !== "number") {
@@ -52,7 +58,10 @@ export async function getRouteDistanceKm(
   destination: LatLng,
 ): Promise<number | null> {
   const apiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY
-  if (!apiKey) return null
+  if (!apiKey) {
+    console.error("[maps] getRouteDistanceKm: GOOGLE_MAPS_SERVER_API_KEY is not set")
+    return null
+  }
 
   const url = new URL(DISTANCE_MATRIX_URL)
   url.searchParams.set("origins", `${origin.lat},${origin.lng}`)
@@ -61,7 +70,10 @@ export async function getRouteDistanceKm(
 
   try {
     const res = await fetch(url.toString())
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.error("[maps] getRouteDistanceKm: HTTP", res.status, await res.text())
+      return null
+    }
     const data = await res.json()
     const element = data?.rows?.[0]?.elements?.[0]
     if (element?.status !== "OK") {
