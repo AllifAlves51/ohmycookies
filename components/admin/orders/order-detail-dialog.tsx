@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   ChevronLeft,
   ChevronRight,
@@ -69,20 +70,24 @@ export function OrderDetailDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const router = useRouter()
   const [detail, setDetail] = useState<OrderDetail | null>(null)
   const [notes, setNotes] = useState("")
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [status, setStatus] = useState(order.status)
 
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resyncs local optimistic status with the server-confirmed one each time the dialog reopens for this order.
+    setStatus(order.status)
     getOrderDetailAction(order.id).then((result) => {
       setDetail(result)
       setNotes(result?.notes ?? "")
     })
-  }, [open, order.id])
+  }, [open, order.id, order.status])
 
-  const currentIndex = STAGES.indexOf(order.status)
+  const currentIndex = STAGES.indexOf(status)
   const nextStatus =
     currentIndex >= 0 && currentIndex < STAGES.length - 1
       ? STAGES[currentIndex + 1]
@@ -98,8 +103,12 @@ export function OrderDetailDialog({
 
   const trackingPath = `/cardapio/${storeSlug}/pedido/${order.id}`
 
-  function changeStatus(status: OrderStatus) {
-    startTransition(() => updateOrderStatusAction(order.id, status))
+  function changeStatus(newStatus: OrderStatus) {
+    setStatus(newStatus)
+    startTransition(async () => {
+      await updateOrderStatusAction(order.id, newStatus)
+      router.refresh()
+    })
   }
 
   function handleCopyLink() {
@@ -139,7 +148,7 @@ export function OrderDetailDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {order.status === "cancelled" ? (
+          {status === "cancelled" ? (
             <div className="bg-muted flex items-center justify-between rounded-lg p-3 text-sm">
               <span>Este pedido foi cancelado.</span>
               <Button
@@ -165,7 +174,7 @@ export function OrderDetailDialog({
                 Voltar
               </Button>
               <span className="text-sm font-medium">
-                {STATUS_LABEL.get(order.status)}
+                {STATUS_LABEL.get(status)}
               </span>
               <Button
                 type="button"
@@ -179,7 +188,7 @@ export function OrderDetailDialog({
             </div>
           )}
 
-          {order.status !== "cancelled" ? (
+          {status !== "cancelled" ? (
             <button
               type="button"
               onClick={() => changeStatus("cancelled")}

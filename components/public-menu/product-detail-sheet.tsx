@@ -105,7 +105,7 @@ export function ProductDetailSheet({
               id="productNotes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex: sem cebola, bem passado..."
+              placeholder="Ex: sem gotas de chocolate, embalar para presente..."
               rows={3}
               maxLength={280}
             />

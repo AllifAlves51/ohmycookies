@@ -11,8 +11,10 @@ import { getOrderTrackingStatusAction } from "@/app/(public)/cardapio/[slug]/act
 import { formatBRL } from "@/lib/utils/money"
 import { cn } from "@/lib/utils"
 
-const TRACKED_STATUSES = STATUS_COLUMNS.filter(
-  (column) => column.status !== "cancelled",
+const TRACKED_STATUSES = STATUS_COLUMNS.filter((column) =>
+  ["new", "preparing", "out_for_delivery", "completed"].includes(
+    column.status,
+  ),
 )
 
 const POLL_INTERVAL_MS = 20_000
