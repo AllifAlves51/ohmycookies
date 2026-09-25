@@ -10,6 +10,7 @@ import { NewOrderAlert } from "@/components/admin/new-order-alert"
 export const metadata: Metadata = {
   title: "Painel",
   robots: { index: false, follow: false },
+  manifest: "/painel.webmanifest",
 }
 
 export default async function AdminLayout({ children }: LayoutProps<"/">) {
