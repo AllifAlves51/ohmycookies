@@ -6,11 +6,12 @@ import {
   getDashboardOrders,
   getDashboardCustomers,
   getTopProducts,
-  computeTodayVsYesterday,
-  computeNewCustomersTodayVsYesterday,
-  computeOrdersInProgressToday,
+  computeDayVsPrevious,
+  computeNewCustomersDayVsPrevious,
+  computeOrdersInProgressOn,
   computeRevenueByDay,
 } from "@/lib/services/dashboard"
+import { isDayKey, storeDayKey } from "@/lib/utils/store-date"
 import { formatBRL } from "@/lib/utils/money"
 import { firstNameFromEmail } from "@/lib/utils/user"
 import { StatCard } from "@/components/admin/dashboard/stat-card"
@@ -22,7 +23,17 @@ import { PromoBanner } from "@/components/admin/dashboard/promo-banner"
 
 const REVENUE_CHART_DAYS = 30
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: PageProps<"/dashboard">) {
+  const { data: requestedDay } = await searchParams
+  const today = storeDayKey()
+  // ?data=YYYY-MM-DD picks the day; anything invalid or in the future
+  // falls back to today.
+  const dayKey =
+    isDayKey(requestedDay) && requestedDay <= today ? requestedDay : today
+  const isToday = dayKey === today
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -59,9 +70,9 @@ export default async function DashboardPage() {
   const orders = dashboardOrders ?? []
   const customers = dashboardCustomers ?? []
 
-  const todayStats = computeTodayVsYesterday(orders)
-  const newCustomers = computeNewCustomersTodayVsYesterday(customers)
-  const ordersInProgress = computeOrdersInProgressToday(orders)
+  const dayStats = computeDayVsPrevious(orders, dayKey)
+  const newCustomers = computeNewCustomersDayVsPrevious(customers, dayKey)
+  const ordersInProgress = computeOrdersInProgressOn(orders, dayKey)
   const revenueByDay = computeRevenueByDay(orders, REVENUE_CHART_DAYS)
 
   const productImageById = new Map(
@@ -82,31 +93,40 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <DashboardHeader name={name} avatarUrl={avatarUrl} />
+      <DashboardHeader
+        name={name}
+        avatarUrl={avatarUrl}
+        dayKey={dayKey}
+        today={today}
+      />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard
-          label="Faturamento hoje"
-          value={formatBRL(todayStats.revenueCents)}
+          label={isToday ? "Faturamento hoje" : "Faturamento do dia"}
+          value={formatBRL(dayStats.revenueCents)}
           icon={Wallet}
-          deltaPct={todayStats.revenueDeltaPct}
+          deltaLabel="vs. dia anterior"
+          deltaPct={dayStats.revenueDeltaPct}
         />
         <StatCard
           label="Pedidos"
-          value={String(todayStats.orderCount)}
+          value={String(dayStats.orderCount)}
           icon={ClipboardList}
-          deltaPct={todayStats.orderCountDeltaPct}
+          deltaLabel="vs. dia anterior"
+          deltaPct={dayStats.orderCountDeltaPct}
         />
         <StatCard
           label="Ticket médio"
-          value={formatBRL(todayStats.averageTicketCents)}
+          value={formatBRL(dayStats.averageTicketCents)}
           icon={Receipt}
-          deltaPct={todayStats.averageTicketDeltaPct}
+          deltaLabel="vs. dia anterior"
+          deltaPct={dayStats.averageTicketDeltaPct}
         />
         <StatCard
           label="Clientes novos"
-          value={String(newCustomers.todayCount)}
+          value={String(newCustomers.count)}
           icon={UserPlus}
+          deltaLabel="vs. dia anterior"
           deltaPct={newCustomers.deltaPct}
         />
       </div>

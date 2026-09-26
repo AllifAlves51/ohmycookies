@@ -1,11 +1,6 @@
 import Link from "next/link"
 import type { OrdersInProgressCounts } from "@/lib/services/dashboard"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const ROWS: {
   key: keyof OrdersInProgressCounts
@@ -14,7 +9,7 @@ const ROWS: {
 }[] = [
   { key: "preparing", label: "Em preparo", dot: "bg-amber-400" },
   { key: "outForDelivery", label: "Saiu para entrega", dot: "bg-blue-400" },
-  { key: "completed", label: "Entregue hoje", dot: "bg-green-500" },
+  { key: "completed", label: "Concluídos", dot: "bg-green-500" },
   { key: "cancelled", label: "Cancelados", dot: "bg-gray-400" },
 ]
 

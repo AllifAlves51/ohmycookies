@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { OrderStatus } from "@/lib/services/order"
+import { addDays, storeDayBounds, storeDayKey } from "@/lib/utils/store-date"
 
 export type DashboardOrder = {
   id: string
@@ -25,7 +26,10 @@ export function getCustomerCount(supabase: SupabaseClient, storeId: string) {
 
 export type DashboardCustomer = { id: string; created_at: string }
 
-export function getDashboardCustomers(supabase: SupabaseClient, storeId: string) {
+export function getDashboardCustomers(
+  supabase: SupabaseClient,
+  storeId: string,
+) {
   return supabase
     .from("customers")
     .select("id, created_at")
@@ -51,7 +55,9 @@ export async function getTopProducts(
 ) {
   const { data, error } = await supabase
     .from("order_items")
-    .select("product_id, product_name, quantity, orders!inner(store_id, status)")
+    .select(
+      "product_id, product_name, quantity, orders!inner(store_id, status)",
+    )
     .eq("orders.store_id", storeId)
     .neq("orders.status", "cancelled")
 
@@ -59,7 +65,10 @@ export async function getTopProducts(
     return { data: null as TopProductRow[] | null, error }
   }
 
-  const totals = new Map<string, { product_id: string | null; quantity: number }>()
+  const totals = new Map<
+    string,
+    { product_id: string | null; quantity: number }
+  >()
   for (const row of data as unknown as {
     product_id: string | null
     product_name: string
@@ -150,73 +159,57 @@ export function computeDashboardDeltas(
   }
 }
 
-function dayBounds(daysAgo: number) {
-  const now = new Date()
-  const start = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo),
-  )
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
-  return { start, end }
-}
-
 function isWithin(iso: string, start: Date, end: Date) {
   const t = new Date(iso).getTime()
   return t >= start.getTime() && t < end.getTime()
 }
 
-export type TodayComparison = DashboardStats & {
+function onDay<T extends { created_at: string }>(rows: T[], dayKey: string) {
+  const { start, end } = storeDayBounds(dayKey)
+  return rows.filter((row) => isWithin(row.created_at, start, end))
+}
+
+export type DayComparison = DashboardStats & {
   revenueDeltaPct: number | null
   orderCountDeltaPct: number | null
   averageTicketDeltaPct: number | null
 }
 
-/** Today's headline stats vs. the same metrics yesterday — used by the
- * dashboard's "hoje" stat cards, distinct from computeDashboardDeltas'
- * trailing-window comparison. */
-export function computeTodayVsYesterday(
+/** A store-local day's headline stats vs. the day before — the dashboard's
+ * stat cards, for whichever day the date picker selects. */
+export function computeDayVsPrevious(
   orders: DashboardOrder[],
-): TodayComparison {
-  const today = dayBounds(0)
-  const yesterday = dayBounds(1)
-
-  const todayStats = computeDashboardStats(
-    orders.filter((o) => isWithin(o.created_at, today.start, today.end)),
-  )
-  const yesterdayStats = computeDashboardStats(
-    orders.filter((o) => isWithin(o.created_at, yesterday.start, yesterday.end)),
+  dayKey: string,
+): DayComparison {
+  const dayStats = computeDashboardStats(onDay(orders, dayKey))
+  const previousStats = computeDashboardStats(
+    onDay(orders, addDays(dayKey, -1)),
   )
 
   return {
-    ...todayStats,
+    ...dayStats,
     revenueDeltaPct: percentDelta(
-      todayStats.revenueCents,
-      yesterdayStats.revenueCents,
+      dayStats.revenueCents,
+      previousStats.revenueCents,
     ),
     orderCountDeltaPct: percentDelta(
-      todayStats.orderCount,
-      yesterdayStats.orderCount,
+      dayStats.orderCount,
+      previousStats.orderCount,
     ),
     averageTicketDeltaPct: percentDelta(
-      todayStats.averageTicketCents,
-      yesterdayStats.averageTicketCents,
+      dayStats.averageTicketCents,
+      previousStats.averageTicketCents,
     ),
   }
 }
 
-export function computeNewCustomersTodayVsYesterday(
+export function computeNewCustomersDayVsPrevious(
   customers: DashboardCustomer[],
+  dayKey: string,
 ) {
-  const today = dayBounds(0)
-  const yesterday = dayBounds(1)
-
-  const todayCount = customers.filter((c) =>
-    isWithin(c.created_at, today.start, today.end),
-  ).length
-  const yesterdayCount = customers.filter((c) =>
-    isWithin(c.created_at, yesterday.start, yesterday.end),
-  ).length
-
-  return { todayCount, deltaPct: percentDelta(todayCount, yesterdayCount) }
+  const count = onDay(customers, dayKey).length
+  const previousCount = onDay(customers, addDays(dayKey, -1)).length
+  return { count, deltaPct: percentDelta(count, previousCount) }
 }
 
 export type OrdersInProgressCounts = {
@@ -226,40 +219,39 @@ export type OrdersInProgressCounts = {
   cancelled: number
 }
 
-/** How many of *today's* orders currently sit in each of these statuses. */
-export function computeOrdersInProgressToday(
+/** How many of that day's orders currently sit in each of these statuses. */
+export function computeOrdersInProgressOn(
   orders: DashboardOrder[],
+  dayKey: string,
 ): OrdersInProgressCounts {
-  const { start, end } = dayBounds(0)
-  const todayOrders = orders.filter((o) => isWithin(o.created_at, start, end))
+  const dayOrders = onDay(orders, dayKey)
 
   return {
-    preparing: todayOrders.filter((o) => o.status === "preparing").length,
-    outForDelivery: todayOrders.filter(
-      (o) => o.status === "out_for_delivery",
-    ).length,
-    completed: todayOrders.filter((o) => o.status === "completed").length,
-    cancelled: todayOrders.filter((o) => o.status === "cancelled").length,
+    preparing: dayOrders.filter((o) => o.status === "preparing").length,
+    outForDelivery: dayOrders.filter((o) => o.status === "out_for_delivery")
+      .length,
+    completed: dayOrders.filter((o) => o.status === "completed").length,
+    cancelled: dayOrders.filter((o) => o.status === "cancelled").length,
   }
 }
 
 export type RevenueByDay = { date: string; revenueCents: number }
 
+/** Revenue per store-local day for the `days` days ending today. */
 export function computeRevenueByDay(
   orders: DashboardOrder[],
   days: number,
 ): RevenueByDay[] {
   const counted = orders.filter((o) => o.status !== "cancelled")
   const buckets = new Map<string, number>()
+  const today = storeDayKey()
 
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    buckets.set(d.toISOString().slice(0, 10), 0)
+    buckets.set(addDays(today, -i), 0)
   }
 
   for (const order of counted) {
-    const key = order.created_at.slice(0, 10)
+    const key = storeDayKey(new Date(order.created_at))
     if (buckets.has(key)) {
       buckets.set(key, (buckets.get(key) ?? 0) + order.total_cents)
     }

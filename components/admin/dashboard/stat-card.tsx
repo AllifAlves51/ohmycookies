@@ -8,11 +8,13 @@ export function StatCard({
   value,
   icon: Icon,
   deltaPct,
+  deltaLabel = "vs. período anterior",
 }: {
   label: string
   value: string
   icon: LucideIcon
   deltaPct?: number | null
+  deltaLabel?: string
 }) {
   return (
     <Card>
@@ -32,7 +34,7 @@ export function StatCard({
               ) : (
                 <ArrowDown className="size-3" />
               )}
-              {Math.abs(deltaPct)}% vs. 30 dias anteriores
+              {Math.abs(deltaPct)}% {deltaLabel}
             </p>
           ) : null}
         </div>

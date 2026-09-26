@@ -1,47 +1,35 @@
-import { ChevronDown } from "lucide-react"
 import { UserAvatar } from "@/components/admin/user-avatar"
+import { DashboardDatePicker } from "@/components/admin/dashboard/dashboard-date-picker"
+import { addDays, formatDayKeyLong } from "@/lib/utils/store-date"
 
-const MONTH_LONG = [
-  "janeiro",
-  "fevereiro",
-  "março",
-  "abril",
-  "maio",
-  "junho",
-  "julho",
-  "agosto",
-  "setembro",
-  "outubro",
-  "novembro",
-  "dezembro",
-]
-
-function formatTodayLabel(date: Date) {
-  return `Hoje, ${date.getDate()} de ${MONTH_LONG[date.getMonth()]} de ${date.getFullYear()}`
+function summaryLine(dayKey: string, today: string) {
+  if (dayKey === today) return "Aqui está o resumo da sua loja hoje."
+  if (dayKey === addDays(today, -1))
+    return "Aqui está o resumo da sua loja ontem."
+  return `Aqui está o resumo da sua loja em ${formatDayKeyLong(dayKey)}.`
 }
 
 export function DashboardHeader({
   name,
   avatarUrl,
+  dayKey,
+  today,
 }: {
   name: string
   avatarUrl: string | null
+  dayKey: string
+  today: string
 }) {
-  const today = new Date()
-
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <h1 className="text-2xl font-semibold">Olá, {name}!</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Aqui está o resumo da sua loja hoje.
+          {summaryLine(dayKey, today)}
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <div className="bg-card text-foreground flex items-center gap-2 rounded-xl border px-4 py-2 text-sm">
-          <span>{formatTodayLabel(today)}</span>
-          <ChevronDown className="text-muted-foreground size-4" />
-        </div>
+        <DashboardDatePicker dayKey={dayKey} today={today} />
         <UserAvatar name={name} avatarUrl={avatarUrl} />
       </div>
     </div>
