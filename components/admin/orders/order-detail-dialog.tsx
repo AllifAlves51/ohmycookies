@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Copy,
   MessageCircle,
+  Pencil,
   Printer,
   Trash2,
   XCircle,
@@ -34,6 +35,8 @@ import {
   buildStatusMessage,
   type WhatsappTemplates,
 } from "@/lib/whatsapp-templates"
+import type { Product } from "@/lib/services/product"
+import { EditOrderDialog } from "@/components/admin/orders/edit-order-dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -76,6 +79,7 @@ export function OrderDetailDialog({
   storeSlug,
   storeName,
   templates,
+  products,
   open,
   onOpenChange,
   onStatusChange,
@@ -85,6 +89,7 @@ export function OrderDetailDialog({
   storeSlug: string
   storeName: string
   templates: WhatsappTemplates
+  products: Product[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onStatusChange?: (orderId: string, status: OrderStatus) => void
@@ -99,12 +104,20 @@ export function OrderDetailDialog({
   // Set right after a status change so the owner can tell the customer.
   const [notifyMessage, setNotifyMessage] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!open) return
-    getOrderDetailAction(order.id).then((result) => {
+  const [editOpen, setEditOpen] = useState(false)
+
+  function loadDetail() {
+    return getOrderDetailAction(order.id).then((result) => {
       setDetail(result)
       setNotes(result?.notes ?? "")
     })
+  }
+
+  useEffect(() => {
+    if (!open) return
+    void loadDetail()
+    // loadDetail only depends on order.id, already listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, order.id])
 
   useEffect(() => {
@@ -424,16 +437,40 @@ export function OrderDetailDialog({
             <span>Atualizado em {formatDateTime(order.updated_at)}</span>
           </div>
 
-          <Button
-            type="button"
-            className="w-full"
-            onClick={() =>
-              window.open(`/imprimir/pedido/${order.id}`, "_blank")
-            }
-          >
-            <Printer />
-            Imprimir pedido
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!detail || status === "cancelled"}
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil />
+              Editar pedido
+            </Button>
+            <Button
+              type="button"
+              onClick={() =>
+                window.open(`/imprimir/pedido/${order.id}`, "_blank")
+              }
+            >
+              <Printer />
+              Imprimir pedido
+            </Button>
+          </div>
+
+          {editOpen && detail ? (
+            <EditOrderDialog
+              order={order}
+              items={detail.items}
+              products={products}
+              open={editOpen}
+              onOpenChange={setEditOpen}
+              onSaved={() => {
+                void loadDetail()
+                router.refresh()
+              }}
+            />
+          ) : null}
 
           <div className="flex gap-2">
             <Button

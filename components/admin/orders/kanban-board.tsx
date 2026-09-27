@@ -14,6 +14,7 @@ import { updateOrderStatusAction } from "@/app/(admin)/pedidos/actions"
 import { useOrderFeed } from "@/components/admin/use-order-feed"
 import { KanbanColumn } from "@/components/admin/orders/kanban-column"
 import { OrderDetailDialog } from "@/components/admin/orders/order-detail-dialog"
+import type { Product } from "@/lib/services/product"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -60,12 +61,14 @@ export function KanbanBoard({
   storeSlug,
   storeName,
   templates,
+  products,
   initialOrders,
 }: {
   storeId: string
   storeSlug: string
   storeName: string
   templates: WhatsappTemplates
+  products: Product[]
   initialOrders: OrderWithCustomer[]
 }) {
   const [orders, setOrders] = useState(initialOrders)
@@ -272,6 +275,7 @@ export function KanbanBoard({
           storeSlug={storeSlug}
           storeName={storeName}
           templates={templates}
+          products={products}
           open
           onOpenChange={(open) => {
             if (!open) setOpenOrderId(null)

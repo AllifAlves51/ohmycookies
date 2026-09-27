@@ -45,7 +45,7 @@ export function CheckoutForm({
   onBack: () => void
   onSuccess: (summary: WhatsappOrderSummary) => void
 }) {
-  const { items, subtotalCents, clear } = useCart()
+  const { items, subtotalCents, clear, removeItem } = useCart()
   // The form only mounts client-side (after opening the cart), so reading
   // storage in the initial state can't cause a hydration mismatch.
   const [saved] = useState(() => loadCustomerProfile(storeSlug))
@@ -68,9 +68,9 @@ export function CheckoutForm({
   const [city] = useState("Primavera do Leste")
   const [uf] = useState("MT")
   const [zip, setZip] = useState(saved?.zip ?? "")
-  const [paymentMethod, setPaymentMethod] = useState<
-    "cash" | "pix" | "card"
-  >(saved?.paymentMethod ?? "cash")
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "pix" | "card">(
+    saved?.paymentMethod ?? "cash",
+  )
   const [hasSavedProfile, setHasSavedProfile] = useState(Boolean(saved))
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -174,11 +174,25 @@ export function CheckoutForm({
       cancelled = true
       clearTimeout(timer)
     }
-  }, [addressComplete, street, number, neighborhood, complement, city, uf, zip, storeSlug])
+  }, [
+    addressComplete,
+    street,
+    number,
+    neighborhood,
+    complement,
+    city,
+    uf,
+    zip,
+    storeSlug,
+  ])
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     setError(null)
+    if (items.length === 0) {
+      setError("Seu carrinho está vazio. Adicione um item para continuar.")
+      return
+    }
 
     startTransition(async () => {
       const result = await submitOrderAction({
@@ -203,6 +217,9 @@ export function CheckoutForm({
 
       if (result.error) {
         setError(result.error)
+        for (const productId of result.unavailableProductIds ?? []) {
+          removeItem(productId)
+        }
         return
       }
 
@@ -416,7 +433,8 @@ export function CheckoutForm({
                     <span className="font-medium">{estimate.zoneName}</span>
                     <span className="text-muted-foreground">
                       {" "}
-                      ({estimate.distanceKm} km) — {formatBRL(estimate.feeCents)}
+                      ({estimate.distanceKm} km) —{" "}
+                      {formatBRL(estimate.feeCents)}
                     </span>
                   </span>
                 ) : null}
@@ -458,7 +476,10 @@ export function CheckoutForm({
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Forma de pagamento</legend>
           <p className="text-muted-foreground text-xs">
-            Combinado diretamente com a loja — não é cobrado por aqui.
+            Combinado diretamente com a loja — não é cobrado por aqui.{" "}
+            <strong className="text-foreground font-medium">
+              Cartão de crédito ou débito. Não aceitamos VR/VA.
+            </strong>
           </p>
           <div className="grid grid-cols-3 gap-2">
             <Button
@@ -491,7 +512,8 @@ export function CheckoutForm({
         {appliedCoupon ? (
           <div className="bg-secondary flex items-center justify-between rounded-xl px-3 py-2 text-sm">
             <span>
-              Cupom <span className="font-medium">{appliedCoupon.code}</span> aplicado
+              Cupom <span className="font-medium">{appliedCoupon.code}</span>{" "}
+              aplicado
             </span>
             <button
               type="button"
@@ -559,7 +581,11 @@ export function CheckoutForm({
           >
             Voltar
           </Button>
-          <Button type="submit" className="flex-1 rounded-xl" disabled={isPending}>
+          <Button
+            type="submit"
+            className="flex-1 rounded-xl"
+            disabled={isPending || items.length === 0}
+          >
             {isPending ? "Enviando..." : "Confirmar pedido"}
           </Button>
         </div>

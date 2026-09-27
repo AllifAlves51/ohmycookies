@@ -17,6 +17,10 @@ import {
 import { formatAddress } from "@/lib/utils/address"
 import type { AddressInput } from "@/lib/validations/store"
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations/checkout"
+import {
+  checkOrderItems,
+  itemsInsertErrorMessage,
+} from "@/lib/services/order-items-check"
 
 export type CheckoutState = {
   error?: string
@@ -24,6 +28,8 @@ export type CheckoutState = {
   orderNumber?: number
   orderId?: string
   discountCents?: number
+  /** Products the cart should drop (deleted, deactivated or sold out). */
+  unavailableProductIds?: string[]
 }
 
 export async function submitOrderAction(
@@ -40,6 +46,18 @@ export async function submitOrderAction(
 
   if (!store) {
     return { error: "Loja não encontrada" }
+  }
+
+  const itemsCheck = await checkOrderItems(
+    supabase,
+    store.id,
+    parsed.data.items,
+  )
+  if (!itemsCheck.ok) {
+    return {
+      error: itemsCheck.error,
+      unavailableProductIds: itemsCheck.unavailableProductIds,
+    }
   }
 
   const { data: customerId, error: customerError } = await supabase.rpc(
@@ -88,10 +106,10 @@ export async function submitOrderAction(
   )
 
   if (itemsError) {
-    return {
-      error:
-        "Um dos itens do carrinho não está mais disponível. Atualize a página e tente novamente.",
-    }
+    // Don't leave an itemless order behind (it would ring the alarm and
+    // show up empty on the board).
+    await supabase.rpc("discard_empty_order", { p_order_id: orderId })
+    return { error: itemsInsertErrorMessage(itemsError.message) }
   }
 
   const { data: orderNumber } = await supabase.rpc("get_order_number", {

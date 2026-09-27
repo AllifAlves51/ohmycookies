@@ -14,6 +14,7 @@ export const manualOrderSchema = z
       .regex(/^\d{10,13}$/, "Informe o WhatsApp com DDD, somente números"),
     fulfillmentType: z.enum(["delivery", "pickup"]),
     deliveryZoneId: z.string().uuid().nullable(),
+    paymentMethod: z.enum(["cash", "pix", "card"]),
     items: z.array(manualOrderItemSchema).min(1, "Adicione ao menos um item"),
   })
   .refine(

@@ -50,9 +50,13 @@ function ProductRow({
             <span className="font-medium">{product.name}</span>
             {product.featured ? <Badge>Destaque</Badge> : null}
             {product.stock_control_enabled ? (
-              <Badge variant="secondary">
-                Estoque: {product.stock_quantity ?? 0}
-              </Badge>
+              (product.stock_quantity ?? 0) > 0 ? (
+                <Badge variant="secondary">
+                  Estoque: {product.stock_quantity}
+                </Badge>
+              ) : (
+                <Badge variant="destructive">Esgotado</Badge>
+              )
             ) : null}
           </div>
           <div className="text-muted-foreground text-sm">

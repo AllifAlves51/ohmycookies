@@ -29,15 +29,44 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null)
 
+/** What's orderable right now, keyed by product id; max null = no stock
+ * control. Used to clean up a cart saved on a previous visit. */
+export type CartCatalog = Record<
+  string,
+  { name: string; unitPriceCents: number; max: number | null }
+>
+
+function reconcile(saved: CartItem[], catalog: CartCatalog | undefined) {
+  if (!catalog) return saved
+  return saved.flatMap((item) => {
+    const current = catalog[item.productId]
+    // Deleted, deactivated or sold out since the cart was saved.
+    if (!current || current.max === 0) return []
+    return [
+      {
+        ...item,
+        name: current.name,
+        unitPriceCents: current.unitPriceCents,
+        quantity:
+          current.max === null
+            ? item.quantity
+            : Math.min(item.quantity, current.max),
+      },
+    ]
+  })
+}
+
 function storageKey(storeSlug: string) {
   return `ohmycookies:cart:${storeSlug}`
 }
 
 export function CartProvider({
   storeSlug,
+  catalog,
   children,
 }: {
   storeSlug: string
+  catalog?: CartCatalog
   children: React.ReactNode
 }) {
   const [items, setItems] = useState<CartItem[]>([])
@@ -54,12 +83,14 @@ export function CartProvider({
       const raw = localStorage.getItem(storageKey(storeSlug))
       if (raw) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration from a browser-only store; there is no external "change" event to subscribe to instead.
-        setItems(JSON.parse(raw))
+        setItems(reconcile(JSON.parse(raw), catalog))
       }
     } catch {
       // Malformed or inaccessible storage (private mode, etc.) — start empty.
     }
     setHydrated(true)
+    // Only on first load: the catalog is server data for this visit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeSlug])
 
   useEffect(() => {

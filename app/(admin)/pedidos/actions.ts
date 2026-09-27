@@ -10,6 +10,11 @@ import {
   type PaymentPreference,
 } from "@/lib/services/order"
 import { notifyStatusChange, type NotifyResult } from "@/lib/whatsapp-bot"
+import type { AddressInput } from "@/lib/validations/store"
+import {
+  checkOrderItems,
+  itemsInsertErrorMessage,
+} from "@/lib/services/order-items-check"
 import {
   manualOrderSchema,
   type ManualOrderInput,
@@ -89,6 +94,15 @@ export async function createManualOrderAction(
     return { error: "Loja não encontrada" }
   }
 
+  const itemsCheck = await checkOrderItems(
+    supabase,
+    store.id,
+    parsed.data.items,
+  )
+  if (!itemsCheck.ok) {
+    return { error: itemsCheck.error.replace(" do carrinho", "") }
+  }
+
   const { data: customerId, error: customerError } = await supabase.rpc(
     "checkout_upsert_customer",
     {
@@ -114,6 +128,7 @@ export async function createManualOrderAction(
       parsed.data.fulfillmentType === "delivery"
         ? parsed.data.deliveryZoneId
         : null,
+    payment_preference: parsed.data.paymentMethod,
   })
 
   if (orderError) {
@@ -132,9 +147,8 @@ export async function createManualOrderAction(
   )
 
   if (itemsError) {
-    return {
-      error: "Um dos itens escolhidos não está mais disponível.",
-    }
+    await supabase.from("orders").delete().eq("id", orderId)
+    return { error: itemsInsertErrorMessage(itemsError.message) }
   }
 
   revalidatePath("/pedidos")
@@ -142,6 +156,8 @@ export async function createManualOrderAction(
 }
 
 export type OrderDetailItem = {
+  id: string
+  productId: string | null
   productName: string
   quantity: number
   unitPriceCents: number
@@ -182,7 +198,7 @@ export async function getOrderDetailAction(
       supabase
         .from("order_items")
         .select(
-          "product_name, quantity, unit_price_cents, subtotal_cents, products(image_url)",
+          "id, product_id, product_name, quantity, unit_price_cents, subtotal_cents, products(image_url)",
         )
         .eq("order_id", orderId),
       supabase
@@ -204,6 +220,8 @@ export async function getOrderDetailAction(
         { image_url: string | null } | { image_url: string | null }[] | null
       const image = Array.isArray(productImage) ? productImage[0] : productImage
       return {
+        id: row.id,
+        productId: row.product_id,
         productName: row.product_name,
         quantity: row.quantity,
         unitPriceCents: row.unit_price_cents,
@@ -296,4 +314,68 @@ export async function deleteOrderAction(orderId: string) {
     .eq("store_id", store.id)
 
   revalidatePath("/pedidos")
+}
+
+export type EditOrderInput = {
+  items: { id: string | null; productId: string | null; quantity: number }[]
+  paymentMethod: PaymentPreference
+  address: AddressInput | null
+}
+
+/** Replaces an order's items, payment method and (for deliveries) address
+ * in one database transaction — totals, delivery fee and stock follow via
+ * triggers. */
+export async function updateOrderAction(
+  orderId: string,
+  input: EditOrderInput,
+): Promise<{ error?: string }> {
+  if (input.items.length === 0) {
+    return { error: "O pedido precisa ter ao menos um item" }
+  }
+  if (input.items.some((item) => !item.id && !item.productId)) {
+    return { error: "Item inválido" }
+  }
+  if (
+    input.items.some(
+      (item) => !Number.isInteger(item.quantity) || item.quantity <= 0,
+    )
+  ) {
+    return { error: "Quantidade inválida" }
+  }
+
+  const supabase = await createClient()
+  const store = await requireOwnedStore(supabase)
+  if (!store) {
+    return { error: "Loja não encontrada" }
+  }
+
+  const { error } = await supabase.rpc("admin_update_order", {
+    p_order_id: orderId,
+    p_items: input.items.map((item) => ({
+      id: item.id,
+      product_id: item.productId,
+      quantity: item.quantity,
+    })),
+    p_payment: input.paymentMethod,
+    p_address: input.address,
+  })
+
+  if (error) {
+    if (error.code === "PGRST202" || error.code === "42883") {
+      return {
+        error:
+          "Rode a migração 20260927120000_stock_control_and_order_editing.sql no Supabase para liberar a edição.",
+      }
+    }
+    return {
+      error: error.message.startsWith("Estoque insuficiente")
+        ? error.message
+        : error.message.includes("Produto inválido")
+          ? "Um dos produtos adicionados não está disponível."
+          : "Não foi possível salvar as alterações. Tente novamente.",
+    }
+  }
+
+  revalidatePath("/pedidos")
+  return {}
 }

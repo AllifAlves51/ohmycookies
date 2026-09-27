@@ -1,4 +1,5 @@
-import { AtSign, Globe, MapPin, Share2, Wallet } from "lucide-react"
+import { AtSign, CreditCard, Globe, MapPin, Share2, Wallet } from "lucide-react"
+import { ACCEPTED_PAYMENTS_NOTE } from "@/lib/pix"
 import type { Store, StoreSettings } from "@/lib/services/store"
 import { formatAddress } from "@/lib/utils/address"
 import { formatBRL } from "@/lib/utils/money"
@@ -36,9 +37,16 @@ export function StoreInfoBlock({
               ? `Pedido mínimo: ${formatBRL(settings.min_order_cents)}`
               : "Sem pedido mínimo"}
           </p>
+          <p className="text-muted-foreground flex items-start gap-1.5 text-xs">
+            <CreditCard className="mt-0.5 size-3.5 shrink-0" />
+            {ACCEPTED_PAYMENTS_NOTE}
+          </p>
         </div>
       </div>
-      <OpeningHoursDisclosure openingHours={store.opening_hours} isOpen={isOpen} />
+      <OpeningHoursDisclosure
+        openingHours={store.opening_hours}
+        isOpen={isOpen}
+      />
       {store.instagram_url || store.facebook_url || store.website_url ? (
         <div className="flex gap-2">
           {store.instagram_url ? (

@@ -163,9 +163,19 @@ export default async function CardapioPage({
   const isOpen = isStoreOpenNow(store.opening_hours)
   const activeProducts = (products ?? []).filter((p) => p.active)
   const featuredProducts = activeProducts.filter((p) => p.featured)
+  const catalog = Object.fromEntries(
+    activeProducts.map((p) => [
+      p.id,
+      {
+        name: p.name,
+        unitPriceCents: p.promo_price_cents ?? p.price_cents,
+        max: p.stock_control_enabled ? (p.stock_quantity ?? 0) : null,
+      },
+    ]),
+  )
 
   return (
-    <CartProvider storeSlug={store.slug}>
+    <CartProvider storeSlug={store.slug} catalog={catalog}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

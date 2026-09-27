@@ -38,11 +38,16 @@ export function NewOrderDialog({
   const [error, setError] = useState<string | null>(null)
   const [customerName, setCustomerName] = useState("")
   const [customerWhatsapp, setCustomerWhatsapp] = useState("")
-  const [fulfillmentType, setFulfillmentType] = useState<
-    "delivery" | "pickup"
-  >("pickup")
+  const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">(
+    "pickup",
+  )
   const [deliveryZoneId, setDeliveryZoneId] = useState("")
-  const [items, setItems] = useState<ItemRow[]>([{ productId: "", quantity: 1 }])
+  const [items, setItems] = useState<ItemRow[]>([
+    { productId: "", quantity: 1 },
+  ])
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "pix" | "card">(
+    "pix",
+  )
 
   const activeProducts = products.filter((p) => p.active)
 
@@ -62,6 +67,7 @@ export function NewOrderDialog({
     setFulfillmentType("pickup")
     setDeliveryZoneId("")
     setItems([{ productId: "", quantity: 1 }])
+    setPaymentMethod("pix")
     setError(null)
   }
 
@@ -80,7 +86,9 @@ export function NewOrderDialog({
         customerName,
         customerWhatsapp,
         fulfillmentType,
-        deliveryZoneId: fulfillmentType === "delivery" ? deliveryZoneId || null : null,
+        deliveryZoneId:
+          fulfillmentType === "delivery" ? deliveryZoneId || null : null,
+        paymentMethod,
         items: validItems,
       })
 
@@ -239,6 +247,28 @@ export function NewOrderDialog({
               <Plus />
               Adicionar item
             </Button>
+          </fieldset>
+
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">Forma de pagamento</legend>
+            <div className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  ["pix", "Pix"],
+                  ["cash", "Dinheiro"],
+                  ["card", "Cartão"],
+                ] as const
+              ).map(([value, label]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant={paymentMethod === value ? "default" : "outline"}
+                  onClick={() => setPaymentMethod(value)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
           </fieldset>
 
           {error ? (
