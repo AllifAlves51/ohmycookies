@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Copy,
   MessageCircle,
+  Printer,
   Trash2,
   XCircle,
 } from "lucide-react"
@@ -422,6 +423,17 @@ export function OrderDetailDialog({
             <span>Criado em {formatDateTime(order.created_at)}</span>
             <span>Atualizado em {formatDateTime(order.updated_at)}</span>
           </div>
+
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() =>
+              window.open(`/imprimir/pedido/${order.id}`, "_blank")
+            }
+          >
+            <Printer />
+            Imprimir pedido
+          </Button>
 
           <div className="flex gap-2">
             <Button

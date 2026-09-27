@@ -1,6 +1,6 @@
 "use client"
 
-import { MessageCircle } from "lucide-react"
+import { MessageCircle, Printer } from "lucide-react"
 import {
   PAYMENT_PREFERENCE_LABEL,
   STATUS_COLUMNS,
@@ -80,6 +80,18 @@ export function OrderCard({
         <span className="text-muted-foreground">
           {formatDateTime(order.created_at)}
         </span>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            window.open(`/imprimir/pedido/${order.id}`, "_blank")
+          }}
+          aria-label={`Imprimir pedido #${order.order_number}`}
+          title="Imprimir pedido"
+          className="text-muted-foreground hover:text-foreground ml-auto rounded p-0.5"
+        >
+          <Printer className="size-3.5" />
+        </button>
       </div>
 
       <div className="flex items-center justify-between gap-2">
