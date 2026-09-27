@@ -19,6 +19,11 @@ function applyWidth(width: Width) {
     "--print-width",
     PRINTABLE_WIDTH[width],
   )
+  // ~24 characters per line on 58mm needs a slightly smaller font.
+  document.documentElement.style.setProperty(
+    "--ticket-font",
+    width === "58mm" ? "11px" : "12px",
+  )
   let style = document.getElementById("ticket-page-size")
   if (!style) {
     style = document.createElement("style")
@@ -30,16 +35,17 @@ function applyWidth(width: Width) {
 
 function readWidth(): Width {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "58mm" ? "58mm" : "80mm"
+    // The store's printer is 58mm; 80mm only when chosen on this computer.
+    return localStorage.getItem(STORAGE_KEY) === "80mm" ? "80mm" : "58mm"
   } catch {
-    return "80mm"
+    return "58mm"
   }
 }
 
 /** Screen-only toolbar: paper width (remembered per computer), print and
  * close. Opens the print dialog automatically once the ticket is ready. */
 export function PrintControls() {
-  const [width, setWidth] = useState<Width>("80mm")
+  const [width, setWidth] = useState<Width>("58mm")
 
   useEffect(() => {
     const saved = readWidth()
@@ -63,7 +69,7 @@ export function PrintControls() {
   return (
     <div className="no-print flex flex-wrap items-center justify-center gap-2 text-sm">
       <div className="flex rounded-lg border bg-white p-0.5">
-        {(["80mm", "58mm"] as const).map((option) => (
+        {(["58mm", "80mm"] as const).map((option) => (
           <button
             key={option}
             type="button"

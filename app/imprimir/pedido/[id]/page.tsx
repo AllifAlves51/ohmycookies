@@ -189,7 +189,7 @@ export default async function PrintOrderPage({
       </article>
 
       <style>{`
-        :root { --ticket-width: 80mm; --print-width: 70mm; }
+        :root { --ticket-width: 58mm; --print-width: 46mm; --ticket-font: 11px; }
         body { background: #f4f4f5 !important; }
         .print-page { padding: 24px 12px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
         .ticket {
@@ -198,7 +198,7 @@ export default async function PrintOrderPage({
           color: #000;
           padding: 4mm 3mm;
           font-family: ui-monospace, "Courier New", monospace;
-          font-size: 12px;
+          font-size: var(--ticket-font);
           line-height: 1.35;
           box-shadow: 0 1px 4px rgba(0,0,0,.15);
         }
