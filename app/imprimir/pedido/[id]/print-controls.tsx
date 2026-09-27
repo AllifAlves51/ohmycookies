@@ -8,8 +8,17 @@ const STORAGE_KEY = "ohmycookies:print-width"
 
 /** CSS variables don't work inside @page, so the paper size rule is
  * written directly whenever the width changes. */
+const PRINTABLE_WIDTH: Record<Width, string> = {
+  "80mm": "70mm",
+  "58mm": "46mm",
+}
+
 function applyWidth(width: Width) {
   document.documentElement.style.setProperty("--ticket-width", width)
+  document.documentElement.style.setProperty(
+    "--print-width",
+    PRINTABLE_WIDTH[width],
+  )
   let style = document.getElementById("ticket-page-size")
   if (!style) {
     style = document.createElement("style")

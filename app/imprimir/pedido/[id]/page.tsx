@@ -189,7 +189,7 @@ export default async function PrintOrderPage({
       </article>
 
       <style>{`
-        :root { --ticket-width: 80mm; }
+        :root { --ticket-width: 80mm; --print-width: 70mm; }
         body { background: #f4f4f5 !important; }
         .print-page { padding: 24px 12px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
         .ticket {
@@ -220,7 +220,19 @@ export default async function PrintOrderPage({
           @page { margin: 0; }
           body { background: #fff !important; }
           .print-page { padding: 0; display: block; }
-          .ticket { box-shadow: none; width: 100%; }
+          /* Thermal heads only print a central strip (~72mm on 80mm paper,
+             ~48mm on 58mm) and clip the rest, so the ticket is narrower
+             than the paper and starts at the printable edge. */
+          .ticket {
+            box-shadow: none;
+            width: var(--print-width);
+            margin: 0;
+            padding: 2mm 0;
+            font-weight: 700;
+          }
+          /* Thermal paper renders grey as faint dots: print pure black. */
+          .ticket, .ticket * { color: #000 !important; }
+          .ticket hr { border-top-width: 2px; }
           .no-print { display: none !important; }
         }
       `}</style>
