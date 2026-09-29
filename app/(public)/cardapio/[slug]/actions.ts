@@ -15,6 +15,7 @@ import {
   getRouteDistanceKm,
 } from "@/lib/services/maps"
 import { formatAddress } from "@/lib/utils/address"
+import { closedMessage, isStoreOpenNow } from "@/lib/utils/opening-hours"
 import type { AddressInput } from "@/lib/validations/store"
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations/checkout"
 import {
@@ -46,6 +47,12 @@ export async function submitOrderAction(
 
   if (!store) {
     return { error: "Loja não encontrada" }
+  }
+
+  // The menu shows "Fechado", but a page left open (or a direct request)
+  // could still submit — refuse outside opening hours.
+  if (!isStoreOpenNow(store.opening_hours)) {
+    return { error: closedMessage(store.opening_hours) }
   }
 
   const itemsCheck = await checkOrderItems(
@@ -90,6 +97,10 @@ export async function submitOrderAction(
   })
 
   if (orderError) {
+    // Raised by the database's opening-hours guard (clock edge cases).
+    if (orderError.message.includes("Loja fechada")) {
+      return { error: closedMessage(store.opening_hours) }
+    }
     return {
       error:
         "Não foi possível criar o pedido. Verifique a região de entrega escolhida e tente novamente.",

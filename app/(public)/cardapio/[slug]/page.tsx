@@ -188,6 +188,8 @@ export default async function CardapioPage({
         <FeaturedCarousel products={featuredProducts} />
         <MenuContent categories={categories ?? []} products={activeProducts} />
         <CartBar
+          openingHours={store.opening_hours}
+          initiallyOpen={isOpen}
           storeSlug={store.slug}
           storeWhatsapp={store.whatsapp_number}
           minOrderCents={settings?.min_order_cents ?? 0}

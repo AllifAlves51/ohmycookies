@@ -1,6 +1,6 @@
 "use client"
 
-import { Trash2 } from "lucide-react"
+import { Clock, Trash2 } from "lucide-react"
 import { useCart } from "@/components/public-menu/cart-context"
 import { formatBRL } from "@/lib/utils/money"
 import { Button } from "@/components/ui/button"
@@ -10,8 +10,11 @@ export function CartReview({
   minOrderCents,
   onCheckout,
   onAddMoreItems,
+  closedNotice,
 }: {
   minOrderCents: number
+  /** Set while the store is closed: explains why checkout is locked. */
+  closedNotice?: string | null
   onCheckout: () => void
   onAddMoreItems: () => void
 }) {
@@ -71,6 +74,12 @@ export function CartReview({
           <span className="text-muted-foreground">Subtotal</span>
           <span className="font-semibold">{formatBRL(subtotalCents)}</span>
         </div>
+        {closedNotice ? (
+          <p className="bg-secondary text-foreground flex items-start gap-2 rounded-xl p-3 text-xs">
+            <Clock className="text-primary mt-0.5 size-4 shrink-0" />
+            {closedNotice}
+          </p>
+        ) : null}
         {belowMinimum ? (
           <p className="text-destructive text-xs">
             Pedido mínimo de {formatBRL(minOrderCents)}
@@ -79,10 +88,10 @@ export function CartReview({
         <Button
           type="button"
           className="w-full rounded-xl"
-          disabled={belowMinimum}
+          disabled={belowMinimum || Boolean(closedNotice)}
           onClick={onCheckout}
         >
-          Finalizar pedido
+          {closedNotice ? "Loja fechada" : "Finalizar pedido"}
         </Button>
       </div>
     </>
