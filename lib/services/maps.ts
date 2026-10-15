@@ -34,7 +34,9 @@ export async function geocodeAddress(
   url.searchParams.set("key", apiKey)
 
   try {
-    const res = await fetch(url.toString())
+    const res = await fetch(url.toString(), {
+      signal: AbortSignal.timeout(8000),
+    })
     if (!res.ok) {
       console.error("[maps] geocodeAddress: HTTP", res.status, await res.text())
       return null
@@ -69,7 +71,9 @@ export async function getRouteDistanceKm(
   url.searchParams.set("key", apiKey)
 
   try {
-    const res = await fetch(url.toString())
+    const res = await fetch(url.toString(), {
+      signal: AbortSignal.timeout(8000),
+    })
     if (!res.ok) {
       console.error("[maps] getRouteDistanceKm: HTTP", res.status, await res.text())
       return null

@@ -17,7 +17,11 @@ export function isEvolutionConfigured() {
   return config() !== null
 }
 
-async function evolutionFetch(path: string, init?: RequestInit) {
+async function evolutionFetch(
+  path: string,
+  init?: RequestInit,
+  timeoutMs = 15000,
+) {
   const cfg = config()
   if (!cfg) throw new Error("Evolution API not configured")
 
@@ -28,7 +32,7 @@ async function evolutionFetch(path: string, init?: RequestInit) {
       apikey: cfg.apiKey,
       ...init?.headers,
     },
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(timeoutMs),
     cache: "no-store",
   })
 }
@@ -62,6 +66,8 @@ export async function getConnectionState(
   try {
     const res = await evolutionFetch(
       `/instance/connectionState/${encodeURIComponent(instance)}`,
+      undefined,
+      5000,
     )
     if (res.status === 404) return "not_found"
     if (!res.ok) return "error"
@@ -187,6 +193,7 @@ export async function sendText(instance: string, phone: string, text: string) {
         method: "POST",
         body: JSON.stringify({ number: toWhatsappNumber(phone), text }),
       },
+      10000,
     )
     if (!res.ok) {
       console.error("[evolution] sendText failed", res.status, await res.text())

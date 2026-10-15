@@ -10,6 +10,8 @@ import {
 
 const POLL_MS = 20000
 const RESUBSCRIBE_DELAY_MS = 3000
+const RESYNC_MIN_GAP_MS = 15000
+const SESSION_WAIT_MS = 5000
 
 type Handlers = {
   onInsert?: (order: OrderWithCustomer) => void
@@ -41,6 +43,17 @@ export function useOrderFeed(storeId: string, handlers: Handlers) {
     let channel: ReturnType<typeof supabase.channel> | null = null
     let resubscribeTimer: number | undefined
     let hadError = false
+    let lastResync = 0
+
+    // A flapping connection can fire this every few seconds; each call
+    // makes the board refetch every order and re-render, which is what
+    // makes the screen stutter. At most once per 15s is plenty.
+    function resync() {
+      const now = Date.now()
+      if (now - lastResync < RESYNC_MIN_GAP_MS) return
+      lastResync = now
+      handlersRef.current.onResync?.()
+    }
 
     function deliverInsert(order: OrderWithCustomer) {
       if (seen.has(order.id)) return
@@ -80,9 +93,15 @@ export function useOrderFeed(storeId: string, handlers: Handlers) {
     async function subscribe() {
       if (disposed) return
       // Make sure the socket uses the current (possibly refreshed) token.
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+      // getSession() waits on a browser-wide auth lock; if another tab or
+      // the installed app holds it, don't let that stall the feed forever.
+      const sessionResult = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<null>((resolve) =>
+          window.setTimeout(() => resolve(null), SESSION_WAIT_MS),
+        ),
+      ])
+      const session = sessionResult?.data.session
       if (session) await supabase.realtime.setAuth(session.access_token)
       if (disposed) return
 
@@ -131,7 +150,7 @@ export function useOrderFeed(storeId: string, handlers: Handlers) {
           if (status === "SUBSCRIBED") {
             if (hadError) {
               hadError = false
-              handlersRef.current.onResync?.()
+              resync()
               void poll()
             }
             return
@@ -161,7 +180,7 @@ export function useOrderFeed(storeId: string, handlers: Handlers) {
 
     function onWake() {
       if (document.visibilityState !== "visible") return
-      handlersRef.current.onResync?.()
+      resync()
       void poll()
     }
 
