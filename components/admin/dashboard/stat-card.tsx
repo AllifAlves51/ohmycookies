@@ -9,12 +9,14 @@ export function StatCard({
   icon: Icon,
   deltaPct,
   deltaLabel = "vs. período anterior",
+  note,
 }: {
   label: string
   value: string
   icon: LucideIcon
   deltaPct?: number | null
   deltaLabel?: string
+  note?: string
 }) {
   return (
     <Card>
@@ -22,6 +24,9 @@ export function StatCard({
         <div>
           <p className="text-muted-foreground text-sm">{label}</p>
           <p className="mt-1 text-2xl font-semibold">{value}</p>
+          {note ? (
+            <p className="text-muted-foreground mt-1 text-xs">{note}</p>
+          ) : null}
           {deltaPct !== undefined && deltaPct !== null ? (
             <p
               className={cn(

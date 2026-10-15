@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { DashboardOrder } from "@/lib/services/dashboard"
 import type { OrderStatus, PaymentPreference } from "@/lib/services/order"
+import { addDays, storeDayKey } from "@/lib/utils/store-date"
 
 export type ReportOrder = DashboardOrder & { delivery_fee_cents: number }
 
@@ -164,13 +165,18 @@ export function computePaymentBreakdown(
 
 export type ReportStats = {
   revenueCents: number
+  /** Orders that became real sales (cancelled ones excluded). */
   orderCount: number
+  /** Every order placed in the period, cancelled ones included. */
+  totalOrderCount: number
+  cancelledCount: number
   averageTicketCents: number
   deliveryFeesCents: number
 }
 
-/** Cancelled orders never became real sales — excluded from every metric
- * except the raw status breakdown below. */
+/** Cancelled orders never became real sales — excluded from the money
+ * metrics and orderCount, but still part of totalOrderCount (everything
+ * customers placed) and the raw status breakdown below. */
 export function computeReportStats(orders: ReportOrder[]): ReportStats {
   const counted = orders.filter((o) => o.status !== "cancelled")
   const revenueCents = counted.reduce((sum, o) => sum + o.total_cents, 0)
@@ -183,6 +189,8 @@ export function computeReportStats(orders: ReportOrder[]): ReportStats {
   return {
     revenueCents,
     orderCount,
+    totalOrderCount: orders.length,
+    cancelledCount: orders.length - orderCount,
     averageTicketCents:
       orderCount > 0 ? Math.round(revenueCents / orderCount) : 0,
     deliveryFeesCents,
@@ -197,6 +205,7 @@ function percentDelta(current: number, previous: number): number | null {
 export type ReportDeltas = {
   revenueDeltaPct: number | null
   orderCountDeltaPct: number | null
+  totalOrderCountDeltaPct: number | null
   averageTicketDeltaPct: number | null
   deliveryFeesDeltaPct: number | null
 }
@@ -208,6 +217,10 @@ export function computeReportDeltas(
   return {
     revenueDeltaPct: percentDelta(current.revenueCents, previous.revenueCents),
     orderCountDeltaPct: percentDelta(current.orderCount, previous.orderCount),
+    totalOrderCountDeltaPct: percentDelta(
+      current.totalOrderCount,
+      previous.totalOrderCount,
+    ),
     averageTicketDeltaPct: percentDelta(
       current.averageTicketCents,
       previous.averageTicketCents,
@@ -242,28 +255,26 @@ export function computeOrdersByStatus(
 
 export type RevenueByDay = { date: string; revenueCents: number }
 
-/** Buckets revenue by calendar day across the exact [from, to] range
- * (unlike the dashboard's trailing-N-days-from-today version). */
+/** Every store-local day from fromKey to toKey inclusive, oldest first. */
+function dayKeysBetween(fromKey: string, toKey: string) {
+  const keys: string[] = []
+  for (let key = fromKey; key <= toKey; key = addDays(key, 1)) keys.push(key)
+  return keys
+}
+
+/** Buckets revenue by store-local calendar day across fromKey..toKey. */
 export function computeRevenueByDayInRange(
   orders: ReportOrder[],
-  from: Date,
-  to: Date,
+  fromKey: string,
+  toKey: string,
 ): RevenueByDay[] {
   const counted = orders.filter((o) => o.status !== "cancelled")
   const buckets = new Map<string, number>()
 
-  const cursor = new Date(from)
-  cursor.setHours(0, 0, 0, 0)
-  const end = new Date(to)
-  end.setHours(0, 0, 0, 0)
-
-  while (cursor.getTime() <= end.getTime()) {
-    buckets.set(cursor.toISOString().slice(0, 10), 0)
-    cursor.setDate(cursor.getDate() + 1)
-  }
+  for (const key of dayKeysBetween(fromKey, toKey)) buckets.set(key, 0)
 
   for (const order of counted) {
-    const key = order.created_at.slice(0, 10)
+    const key = storeDayKey(new Date(order.created_at))
     if (buckets.has(key)) {
       buckets.set(key, (buckets.get(key) ?? 0) + order.total_cents)
     }
@@ -285,18 +296,12 @@ export type OrdersEvolutionDay = {
 
 export function computeOrdersEvolutionByDay(
   orders: ReportOrder[],
-  from: Date,
-  to: Date,
+  fromKey: string,
+  toKey: string,
 ): OrdersEvolutionDay[] {
   const buckets = new Map<string, OrdersEvolutionDay>()
 
-  const cursor = new Date(from)
-  cursor.setHours(0, 0, 0, 0)
-  const end = new Date(to)
-  end.setHours(0, 0, 0, 0)
-
-  while (cursor.getTime() <= end.getTime()) {
-    const key = cursor.toISOString().slice(0, 10)
+  for (const key of dayKeysBetween(fromKey, toKey)) {
     buckets.set(key, {
       date: key,
       completed: 0,
@@ -304,11 +309,10 @@ export function computeOrdersEvolutionByDay(
       outForDelivery: 0,
       cancelled: 0,
     })
-    cursor.setDate(cursor.getDate() + 1)
   }
 
   for (const order of orders) {
-    const key = order.created_at.slice(0, 10)
+    const key = storeDayKey(new Date(order.created_at))
     const bucket = buckets.get(key)
     if (!bucket) continue
 

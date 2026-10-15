@@ -1,4 +1,4 @@
-import { Wallet, ClipboardList, Receipt, Bike } from "lucide-react"
+import { Wallet, ClipboardList, ListChecks, Receipt, Bike } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { getStoreByOwnerId } from "@/lib/services/store"
 import { getProducts } from "@/lib/services/product"
@@ -15,11 +15,11 @@ import {
   computeOrdersEvolutionByDay,
 } from "@/lib/services/report"
 import {
-  getReportDateRange,
-  getPreviousDateRange,
-  isReportPeriod,
-  type ReportPeriod,
+  resolveReportRange,
+  getPreviousRange,
+  formatRangeLabel,
 } from "@/lib/utils/report-period"
+import { storeDayKey } from "@/lib/utils/store-date"
 import { formatBRL } from "@/lib/utils/money"
 import { firstNameFromEmail } from "@/lib/utils/user"
 import { StatCard } from "@/components/admin/dashboard/stat-card"
@@ -37,9 +37,7 @@ export default async function RelatoriosPage({
   searchParams,
 }: PageProps<"/relatorios">) {
   const params = await searchParams
-  const period: ReportPeriod = isReportPeriod(params.period)
-    ? params.period
-    : "7d"
+  const range = resolveReportRange(params)
 
   const supabase = await createClient()
   const {
@@ -62,8 +60,8 @@ export default async function RelatoriosPage({
     )
   }
 
-  const { from, to } = getReportDateRange(period)
-  const previous = getPreviousDateRange(from, to)
+  const { from, to } = range
+  const previous = getPreviousRange(range)
 
   const [
     { data: orders },
@@ -88,8 +86,16 @@ export default async function RelatoriosPage({
   )
   const paymentBreakdown = computePaymentBreakdown(paymentRows ?? [])
   const statusCounts = computeOrdersByStatus(orders ?? [])
-  const revenueByDay = computeRevenueByDayInRange(orders ?? [], from, to)
-  const ordersEvolution = computeOrdersEvolutionByDay(orders ?? [], from, to)
+  const revenueByDay = computeRevenueByDayInRange(
+    orders ?? [],
+    range.fromKey,
+    range.toKey,
+  )
+  const ordersEvolution = computeOrdersEvolutionByDay(
+    orders ?? [],
+    range.fromKey,
+    range.toKey,
+  )
 
   const productImageById = new Map(
     (allProducts ?? []).map((product) => [product.id, product.image_url]),
@@ -115,16 +121,32 @@ export default async function RelatoriosPage({
         <div>
           <h1 className="text-2xl font-semibold">Relatórios</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Acompanhe o desempenho da sua loja.
+            Período: {formatRangeLabel(range)}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <ReportPeriodSelect period={period} />
+        <div className="flex flex-wrap items-center gap-3">
+          <ReportPeriodSelect
+            period={range.period}
+            fromKey={range.fromKey}
+            toKey={range.toKey}
+            today={storeDayKey()}
+          />
           <UserAvatar name={name} avatarUrl={avatarUrl} />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <StatCard
+          label="Total de pedidos feitos"
+          value={String(stats.totalOrderCount)}
+          icon={ListChecks}
+          note={
+            stats.cancelledCount > 0
+              ? `${stats.cancelledCount} ${stats.cancelledCount === 1 ? "cancelado" : "cancelados"}`
+              : "Nenhum cancelado"
+          }
+          deltaPct={deltas.totalOrderCountDeltaPct}
+        />
         <StatCard
           label="Faturamento"
           value={formatBRL(stats.revenueCents)}
@@ -132,9 +154,10 @@ export default async function RelatoriosPage({
           deltaPct={deltas.revenueDeltaPct}
         />
         <StatCard
-          label="Pedidos"
+          label="Pedidos válidos"
           value={String(stats.orderCount)}
           icon={ClipboardList}
+          note="Sem cancelados"
           deltaPct={deltas.orderCountDeltaPct}
         />
         <StatCard
