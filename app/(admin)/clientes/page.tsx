@@ -7,6 +7,7 @@ import {
 } from "@/lib/services/customer"
 import { CustomerTable } from "@/components/admin/customers/customer-table"
 import { Card, CardContent } from "@/components/ui/card"
+import { PageHeader } from "@/components/admin/page-header"
 
 export default async function ClientesPage() {
   const supabase = await createClient()
@@ -41,8 +42,11 @@ export default async function ClientesPage() {
   )
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">Clientes</h1>
+    <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
+      <PageHeader
+        title="Clientes"
+        description="Quem já comprou, quanto gastou e quando voltou pela última vez."
+      />
       <Card>
         <CardContent>
           <CustomerTable customers={customersWithStats} />

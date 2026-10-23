@@ -29,6 +29,8 @@ export type StoreSettings = {
   free_delivery_threshold_cents: number | null
   order_prep_minutes: number
   address_map_confirmation_enabled: boolean
+  /** Absent until the security_hardening_and_themes migration runs. */
+  seasonal_theme?: string
   /** Raw jsonb — always read through resolveTemplates(). Absent until the
    * whatsapp_message_templates migration runs. */
   whatsapp_templates?: unknown
@@ -61,6 +63,48 @@ export function getStoreSettings(supabase: SupabaseClient, storeId: string) {
     .select("*")
     .eq("store_id", storeId)
     .single<StoreSettings>()
+}
+
+/** What the storefront may see of store_settings. Reads the
+ * public_store_settings view (no WhatsApp numbers/instance/templates);
+ * falls back to the same columns on the table while the migration that
+ * creates the view hasn't been run yet. */
+export type PublicStoreSettings = Pick<
+  StoreSettings,
+  | "store_id"
+  | "min_order_cents"
+  | "pickup_enabled"
+  | "delivery_enabled"
+  | "latitude"
+  | "longitude"
+  | "free_delivery_threshold_cents"
+  | "order_prep_minutes"
+  | "address_map_confirmation_enabled"
+  | "seasonal_theme"
+>
+
+const PUBLIC_SETTINGS_COLUMNS =
+  "store_id, min_order_cents, pickup_enabled, delivery_enabled, latitude, longitude, free_delivery_threshold_cents, order_prep_minutes, address_map_confirmation_enabled"
+
+export async function getPublicStoreSettings(
+  supabase: SupabaseClient,
+  storeId: string,
+) {
+  const fromView = await supabase
+    .from("public_store_settings")
+    .select(`${PUBLIC_SETTINGS_COLUMNS}, seasonal_theme`)
+    .eq("store_id", storeId)
+    .maybeSingle<PublicStoreSettings>()
+
+  if (!fromView.error) {
+    return fromView
+  }
+
+  return supabase
+    .from("store_settings")
+    .select(PUBLIC_SETTINGS_COLUMNS)
+    .eq("store_id", storeId)
+    .maybeSingle<PublicStoreSettings>()
 }
 
 export function updateStore(
@@ -116,6 +160,7 @@ export function updateStoreSettings(
       | "free_delivery_threshold_cents"
       | "order_prep_minutes"
       | "address_map_confirmation_enabled"
+      | "seasonal_theme"
     >
   >,
 ) {

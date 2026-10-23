@@ -5,6 +5,7 @@ import { getSiteUrl } from "@/lib/site"
 import { WhatsappMessagesEditor } from "@/components/admin/whatsapp/messages-editor"
 import { WhatsappConnectionCard } from "@/components/admin/whatsapp/connection-card"
 import { getWhatsappStatusAction } from "@/app/(admin)/whatsapp/actions"
+import { PageHeader } from "@/components/admin/page-header"
 
 export const metadata = { title: "WhatsApp" }
 
@@ -36,13 +37,11 @@ export default async function WhatsappPage() {
   ])
 
   return (
-    <main className="mx-auto w-full max-w-5xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">WhatsApp</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Personalize as mensagens enviadas aos seus clientes.
-        </p>
-      </div>
+    <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
+      <PageHeader
+        title="WhatsApp"
+        description="Conexão do robô e mensagens enviadas aos seus clientes."
+      />
       <WhatsappConnectionCard
         initialStatus={status}
         storeWhatsapp={store.whatsapp_number}

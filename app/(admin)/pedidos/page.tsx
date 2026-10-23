@@ -6,6 +6,7 @@ import { getProducts } from "@/lib/services/product"
 import { getDeliveryZones } from "@/lib/services/delivery"
 import { KanbanBoard } from "@/components/admin/orders/kanban-board"
 import { NewOrderDialog } from "@/components/admin/orders/new-order-dialog"
+import { PageHeader } from "@/components/admin/page-header"
 
 export default async function PedidosPage() {
   const supabase = await createClient()
@@ -43,16 +44,18 @@ export default async function PedidosPage() {
 
   return (
     <main className="flex flex-1 flex-col">
-      <div className="flex items-start justify-between gap-4 px-6 pt-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Pedidos</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Acompanhe e gerencie todos os pedidos em tempo real.
-          </p>
-        </div>
-        <NewOrderDialog
-          products={products ?? []}
-          deliveryZones={deliveryZones ?? []}
+      <div className="px-4 pt-6 sm:px-8 sm:pt-8">
+        <PageHeader
+          title="Pedidos"
+          description="Acompanhe e mova os pedidos em tempo real."
+          actions={
+            <NewOrderDialog
+              products={products ?? []}
+              deliveryZones={deliveryZones ?? []}
+              storeCity={store.address?.city ?? ""}
+              storeState={store.address?.state ?? ""}
+            />
+          }
         />
       </div>
       <KanbanBoard

@@ -1,6 +1,5 @@
 "use client"
 
-import { Heart } from "lucide-react"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 import {
   PAYMENT_PREFERENCE_LABEL,
@@ -72,7 +71,10 @@ export function PaymentBreakdownChart({
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <Heart className="fill-primary text-primary size-6" />
+          <div className="text-center leading-tight">
+            <p className="text-lg font-semibold tabular-nums">{total}</p>
+            <p className="text-muted-foreground text-[0.65rem]">pedidos</p>
+          </div>
         </div>
       </div>
       <ul className="space-y-2 text-sm">

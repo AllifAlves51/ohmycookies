@@ -10,6 +10,7 @@ import {
   Copy,
   MessageCircle,
   Pencil,
+  Percent,
   Printer,
   Trash2,
   XCircle,
@@ -19,6 +20,7 @@ import {
   updateOrderNotesAction,
   setOrderPaymentStatusAction,
   deleteOrderAction,
+  setOrderDiscountAction,
   updateOrderStatusAction,
   type OrderDetail,
 } from "@/app/(admin)/pedidos/actions"
@@ -37,6 +39,12 @@ import {
 } from "@/lib/whatsapp-templates"
 import type { Product } from "@/lib/services/product"
 import { EditOrderDialog } from "@/components/admin/orders/edit-order-dialog"
+import {
+  DiscountField,
+  NO_DISCOUNT,
+  discountToCents,
+  type DiscountValue,
+} from "@/components/admin/orders/discount-field"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -57,6 +65,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
+// "confirmed" isn't a step of its own on the board: it sits with "new".
 const STAGES: OrderStatus[] = [
   "new",
   "preparing",
@@ -84,6 +93,7 @@ export function OrderDetailDialog({
   onOpenChange,
   onStatusChange,
   onDeleted,
+  onPatched,
 }: {
   order: OrderWithCustomer
   storeSlug: string
@@ -94,6 +104,9 @@ export function OrderDetailDialog({
   onOpenChange: (open: boolean) => void
   onStatusChange?: (orderId: string, status: OrderStatus) => void
   onDeleted?: (orderId: string) => void
+  /** Local update for fields changed here, so the board doesn't depend on
+   * realtime to show them. */
+  onPatched?: (orderId: string, patch: Partial<OrderWithCustomer>) => void
 }) {
   const router = useRouter()
   const [detail, setDetail] = useState<OrderDetail | null>(null)
@@ -105,6 +118,10 @@ export function OrderDetailDialog({
   const [notifyMessage, setNotifyMessage] = useState<string | null>(null)
 
   const [editOpen, setEditOpen] = useState(false)
+  const [discountOpen, setDiscountOpen] = useState(false)
+  const [discount, setDiscount] = useState<DiscountValue>(NO_DISCOUNT)
+  const [discountError, setDiscountError] = useState<string | null>(null)
+  const grossCents = order.subtotal_cents + order.delivery_fee_cents
 
   function loadDetail() {
     return getOrderDetailAction(order.id).then((result) => {
@@ -125,7 +142,7 @@ export function OrderDetailDialog({
     setStatus(order.status)
   }, [order.status])
 
-  const currentIndex = STAGES.indexOf(status)
+  const currentIndex = STAGES.indexOf(status === "confirmed" ? "new" : status)
   const nextStatus =
     currentIndex >= 0 && currentIndex < STAGES.length - 1
       ? STAGES[currentIndex + 1]
@@ -191,6 +208,29 @@ export function OrderDetailDialog({
       ),
     )
     setDetail((prev) => (prev ? { ...prev, paymentStatus: status } : prev))
+  }
+
+  function handleApplyDiscount(cents: number) {
+    setDiscountError(null)
+    startTransition(async () => {
+      const result = await setOrderDiscountAction(order.id, cents)
+      if (result.error) {
+        setDiscountError(result.error)
+        return
+      }
+      onPatched?.(order.id, {
+        discount_cents: result.discountCents ?? cents,
+        total_cents: result.totalCents ?? order.total_cents,
+      })
+      toast.success(
+        cents > 0
+          ? `Desconto de ${formatBRL(result.discountCents ?? cents)} aplicado`
+          : "Desconto removido",
+      )
+      setDiscountOpen(false)
+      setDiscount(NO_DISCOUNT)
+      router.refresh()
+    })
   }
 
   function handleDelete() {
@@ -401,16 +441,106 @@ export function OrderDetailDialog({
                 <span>{formatBRL(order.delivery_fee_cents)}</span>
               </div>
               {order.discount_cents > 0 ? (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Desconto</span>
-                  <span>-{formatBRL(order.discount_cents)}</span>
+                <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+                  <span>Desconto</span>
+                  <span className="tabular-nums">
+                    −{formatBRL(order.discount_cents)}
+                  </span>
                 </div>
               ) : null}
               <div className="flex justify-between font-semibold">
                 <span>Total</span>
-                <span>{formatBRL(order.total_cents)}</span>
+                <span className="tabular-nums">
+                  {formatBRL(order.total_cents)}
+                </span>
               </div>
             </div>
+
+            {status !== "cancelled" ? (
+              discountOpen ? (
+                <div className="bg-muted/50 space-y-2 rounded-md border p-3">
+                  <p className="text-xs font-medium">
+                    Novo desconto (substitui o atual)
+                  </p>
+                  <DiscountField
+                    id={`discount-${order.id}`}
+                    value={discount}
+                    baseCents={grossCents}
+                    onChange={setDiscount}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Novo total:{" "}
+                    <span className="text-foreground font-medium tabular-nums">
+                      {formatBRL(
+                        grossCents - discountToCents(discount, grossCents),
+                      )}
+                    </span>
+                  </p>
+                  {discountError ? (
+                    <p className="text-destructive text-xs" role="alert">
+                      {discountError}
+                    </p>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex-1"
+                      disabled={
+                        isPending || discountToCents(discount, grossCents) <= 0
+                      }
+                      onClick={() =>
+                        handleApplyDiscount(
+                          discountToCents(discount, grossCents),
+                        )
+                      }
+                    >
+                      Aplicar desconto
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setDiscountOpen(false)
+                        setDiscount(NO_DISCOUNT)
+                        setDiscountError(null)
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    disabled={isPending}
+                    onClick={() => setDiscountOpen(true)}
+                  >
+                    <Percent />
+                    {order.discount_cents > 0
+                      ? "Alterar desconto"
+                      : "Aplicar desconto"}
+                  </Button>
+                  {order.discount_cents > 0 ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      disabled={isPending}
+                      onClick={() => handleApplyDiscount(0)}
+                    >
+                      Remover
+                    </Button>
+                  ) : null}
+                </div>
+              )
+            ) : null}
           </div>
 
           <div className="space-y-2 rounded-lg border p-3 text-sm">

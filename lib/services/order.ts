@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { fetchAll } from "@/lib/supabase/fetch-all"
 import type { AddressInput } from "@/lib/validations/store"
 
 export type OrderStatus =
@@ -13,50 +14,50 @@ export const STATUS_COLUMNS: {
   status: OrderStatus
   label: string
   badgeClassName: string
-  headerClassName: string
-  columnClassName: string
+  /** Status dot on the board column header and the order card. */
+  dotClassName: string
 }[] = [
   {
     status: "new",
     label: "Novos",
-    badgeClassName: "bg-red-100 text-red-700",
-    headerClassName: "text-red-700",
-    columnClassName: "bg-red-50/60",
+    badgeClassName:
+      "bg-red-50 text-red-700 ring-1 ring-red-600/15 dark:bg-red-950/50 dark:text-red-300",
+    dotClassName: "bg-red-500",
   },
   {
     status: "confirmed",
     label: "Confirmados",
-    badgeClassName: "bg-amber-100 text-amber-700",
-    headerClassName: "text-amber-700",
-    columnClassName: "bg-amber-50/60",
+    badgeClassName:
+      "bg-amber-50 text-amber-800 ring-1 ring-amber-600/20 dark:bg-amber-950/50 dark:text-amber-300",
+    dotClassName: "bg-amber-500",
   },
   {
     status: "preparing",
     label: "Em preparo",
-    badgeClassName: "bg-blue-100 text-blue-700",
-    headerClassName: "text-blue-700",
-    columnClassName: "bg-blue-50/60",
+    badgeClassName:
+      "bg-blue-50 text-blue-700 ring-1 ring-blue-600/15 dark:bg-blue-950/50 dark:text-blue-300",
+    dotClassName: "bg-blue-500",
   },
   {
     status: "out_for_delivery",
     label: "Saiu para entrega",
-    badgeClassName: "bg-emerald-100 text-emerald-700",
-    headerClassName: "text-emerald-700",
-    columnClassName: "bg-emerald-50/60",
+    badgeClassName:
+      "bg-violet-50 text-violet-700 ring-1 ring-violet-600/15 dark:bg-violet-950/50 dark:text-violet-300",
+    dotClassName: "bg-violet-500",
   },
   {
     status: "completed",
     label: "Concluídos",
-    badgeClassName: "bg-green-100 text-green-700",
-    headerClassName: "text-green-800",
-    columnClassName: "bg-green-50/60",
+    badgeClassName:
+      "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/15 dark:bg-emerald-950/50 dark:text-emerald-300",
+    dotClassName: "bg-emerald-500",
   },
   {
     status: "cancelled",
     label: "Cancelados",
-    badgeClassName: "bg-gray-200 text-gray-600",
-    headerClassName: "text-gray-600",
-    columnClassName: "bg-gray-50",
+    badgeClassName:
+      "bg-stone-100 text-stone-600 ring-1 ring-stone-500/15 dark:bg-stone-800 dark:text-stone-300",
+    dotClassName: "bg-stone-400",
   },
 ]
 
@@ -90,13 +91,28 @@ export type OrderWithCustomer = Order & {
   customer: { name: string; whatsapp: string } | null
 }
 
+/** How far back the board loads finished (completed/cancelled) orders.
+ * Open orders are always loaded, however old. */
+export const BOARD_HISTORY_DAYS = 30
+
 export function getOrders(supabase: SupabaseClient, storeId: string) {
-  return supabase
-    .from("orders")
-    .select("*, customer:customers(name, whatsapp)")
-    .eq("store_id", storeId)
-    .order("created_at", { ascending: false })
-    .returns<OrderWithCustomer[]>()
+  const since = new Date(
+    Date.now() - BOARD_HISTORY_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString()
+
+  return fetchAll((from, to) =>
+    supabase
+      .from("orders")
+      .select("*, customer:customers(name, whatsapp)")
+      .eq("store_id", storeId)
+      .or(
+        `status.in.(new,confirmed,preparing,out_for_delivery),created_at.gte.${since}`,
+      )
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .returns<OrderWithCustomer[]>(),
+  )
 }
 
 export function getOrderWithCustomer(

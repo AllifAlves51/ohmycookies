@@ -6,7 +6,10 @@ import { createClient } from "@/lib/supabase/server"
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
-  const next = searchParams.get("next") ?? "/dashboard"
+  const requested = searchParams.get("next") ?? "/dashboard"
+  // Only same-site paths: "@evil.com" or "//evil.com" would turn the
+  // redirect below into an open redirect.
+  const next = /^\/(?![/\\])/.test(requested) ? requested : "/dashboard"
 
   if (code) {
     const supabase = await createClient()

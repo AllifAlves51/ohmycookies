@@ -32,6 +32,7 @@ import { OrdersByStatusChart } from "@/components/admin/reports/orders-by-status
 import { RevenueByCategoryList } from "@/components/admin/reports/revenue-by-category-list"
 import { OrdersEvolutionChart } from "@/components/admin/reports/orders-evolution-chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { PageHeader } from "@/components/admin/page-header"
 
 export default async function RelatoriosPage({
   searchParams,
@@ -100,14 +101,12 @@ export default async function RelatoriosPage({
   const productImageById = new Map(
     (allProducts ?? []).map((product) => [product.id, product.image_url]),
   )
-  const topProductsWithImages = (products ?? [])
-    .slice(0, 5)
-    .map((product) => ({
-      ...product,
-      image_url: product.product_id
-        ? (productImageById.get(product.product_id) ?? null)
-        : null,
-    }))
+  const topProductsWithImages = (products ?? []).slice(0, 5).map((product) => ({
+    ...product,
+    image_url: product.product_id
+      ? (productImageById.get(product.product_id) ?? null)
+      : null,
+  }))
 
   const avatarUrl =
     typeof user.user_metadata?.avatar_url === "string"
@@ -116,24 +115,22 @@ export default async function RelatoriosPage({
   const name = firstNameFromEmail(user.email ?? "")
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Relatórios</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Período: {formatRangeLabel(range)}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <ReportPeriodSelect
-            period={range.period}
-            fromKey={range.fromKey}
-            toKey={range.toKey}
-            today={storeDayKey()}
-          />
-          <UserAvatar name={name} avatarUrl={avatarUrl} />
-        </div>
-      </div>
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
+      <PageHeader
+        title="Relatórios"
+        description={`Período: ${formatRangeLabel(range)}`}
+        actions={
+          <>
+            <ReportPeriodSelect
+              period={range.period}
+              fromKey={range.fromKey}
+              toKey={range.toKey}
+              today={storeDayKey()}
+            />
+            <UserAvatar name={name} avatarUrl={avatarUrl} />
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard

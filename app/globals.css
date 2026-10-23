@@ -49,72 +49,77 @@
 }
 
 :root {
-  --background: #fff9f6;
-  --foreground: #462d2b;
+  /* Warm neutrals carry the interface; the brand red is reserved for the
+     primary action, focus and a few accents. */
+  --background: #f8f7f5;
+  --foreground: #1c1917;
   --card: #ffffff;
-  --card-foreground: #462d2b;
+  --card-foreground: #1c1917;
   --popover: #ffffff;
-  --popover-foreground: #462d2b;
+  --popover-foreground: #1c1917;
   --primary: #d21f30;
   --primary-foreground: #ffffff;
-  --secondary: #f8ccd2;
-  --secondary-foreground: #462d2b;
-  --muted: #fce8ea;
-  --muted-foreground: #8a6560;
-  --accent: #f8ccd2;
-  --accent-foreground: #462d2b;
+  --secondary: #f1efec;
+  --secondary-foreground: #1c1917;
+  --muted: #f1efec;
+  --muted-foreground: #6f6862;
+  --accent: #fcecee;
+  --accent-foreground: #9b1523;
   --destructive: #dc2626;
-  --border: #f1d9da;
-  --input: #f1d9da;
+  --border: #e7e3df;
+  --input: #ddd8d3;
   --ring: #d21f30;
   --chart-1: #d21f30;
-  --chart-2: #f8ccd2;
-  --chart-3: #462d2b;
-  --chart-4: #e8919c;
-  --chart-5: #8a6560;
-  --radius: 0.9rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #462d2b;
+  --chart-2: #8b5e3c;
+  --chart-3: #e0a43a;
+  --chart-4: #f2a7b0;
+  --chart-5: #78716c;
+  --radius: 0.625rem;
+  --sidebar: #fbfaf9;
+  --sidebar-foreground: #1c1917;
   --sidebar-primary: #d21f30;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #fce8ea;
-  --sidebar-accent-foreground: #462d2b;
-  --sidebar-border: #f1d9da;
+  --sidebar-accent: #f1efec;
+  --sidebar-accent-foreground: #1c1917;
+  --sidebar-border: #ebe7e3;
   --sidebar-ring: #d21f30;
+  --shadow-soft: 0 1px 2px rgb(28 25 23 / 0.04), 0 1px 1px rgb(28 25 23 / 0.03);
+  --shadow-raised:
+    0 1px 2px rgb(28 25 23 / 0.04), 0 8px 24px -8px rgb(28 25 23 / 0.12);
 }
 
 .dark {
-  --background: #2a1a19;
-  --foreground: #fdf1ef;
-  --card: #3a2422;
-  --card-foreground: #fdf1ef;
-  --popover: #3a2422;
-  --popover-foreground: #fdf1ef;
-  --primary: #ea4a5a;
-  --primary-foreground: #2a1a19;
-  --secondary: #4a2f2d;
-  --secondary-foreground: #fdf1ef;
-  --muted: #4a2f2d;
-  --muted-foreground: #cba39d;
-  --accent: #4a2f2d;
-  --accent-foreground: #fdf1ef;
+  --background: #141211;
+  --foreground: #f5f3f1;
+  --card: #1c1a18;
+  --card-foreground: #f5f3f1;
+  --popover: #1f1c1a;
+  --popover-foreground: #f5f3f1;
+  --primary: #ef4454;
+  --primary-foreground: #ffffff;
+  --secondary: #262321;
+  --secondary-foreground: #f5f3f1;
+  --muted: #262321;
+  --muted-foreground: #a39d97;
+  --accent: #3a1a1e;
+  --accent-foreground: #fbc7cd;
   --destructive: #f87171;
-  --border: #4a2f2d;
-  --input: #4a2f2d;
-  --ring: #ea4a5a;
-  --chart-1: #ea4a5a;
-  --chart-2: #f8ccd2;
-  --chart-3: #fdf1ef;
-  --chart-4: #e8919c;
-  --chart-5: #cba39d;
-  --sidebar: #3a2422;
-  --sidebar-foreground: #fdf1ef;
-  --sidebar-primary: #ea4a5a;
-  --sidebar-primary-foreground: #2a1a19;
-  --sidebar-accent: #4a2f2d;
-  --sidebar-accent-foreground: #fdf1ef;
-  --sidebar-border: #4a2f2d;
-  --sidebar-ring: #ea4a5a;
+  --border: #2e2a27;
+  --input: #3a3532;
+  --ring: #ef4454;
+  --chart-1: #ef4454;
+  --chart-2: #c08a5f;
+  --chart-3: #e9b65a;
+  --chart-4: #f2a7b0;
+  --chart-5: #a8a29e;
+  --sidebar: #181614;
+  --sidebar-foreground: #f5f3f1;
+  --sidebar-primary: #ef4454;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #262321;
+  --sidebar-accent-foreground: #f5f3f1;
+  --sidebar-border: #2a2624;
+  --sidebar-ring: #ef4454;
 }
 
 @layer base {
@@ -126,5 +131,213 @@
   }
   html {
     @apply font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.011em;
+  }
+}
+
+@utility shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+@utility shadow-raised {
+  box-shadow: var(--shadow-raised);
+}
+
+/* Seasonal storefront themes ---------------------------------------------
+   The storefront wrapper gets data-season="…"; each theme re-tints the
+   brand tokens for the whole document (via :has, so sheets and dialogs
+   portalled to <body> follow too) and supplies the hero gradient. Decorations live
+   in components/public-menu/seasonal/. */
+
+:root:has([data-season]) {
+  --season-hero: linear-gradient(180deg, #2b1a18 0%, #4a2a26 100%);
+  --season-ink: #ffffff;
+}
+
+:root:has([data-season="halloween"]) {
+  --primary: #7c3aed;
+  --ring: #7c3aed;
+  --accent: #f3ecff;
+  --accent-foreground: #5b21b6;
+  --season-highlight: #f97316;
+  --season-hero:
+    radial-gradient(120% 90% at 80% 0%, #6d28d9 0%, transparent 55%),
+    linear-gradient(180deg, #1a0b2e 0%, #3b1466 60%, #4c1d95 100%);
+}
+
+:root:has([data-season="christmas"]) {
+  --primary: #b91c1c;
+  --ring: #b91c1c;
+  --accent: #ecf7ef;
+  --accent-foreground: #166534;
+  --season-highlight: #eab308;
+  --season-hero:
+    radial-gradient(100% 80% at 20% 0%, #1f7a4d 0%, transparent 60%),
+    linear-gradient(180deg, #072a1c 0%, #0d3d29 60%, #14532d 100%);
+}
+
+:root:has([data-season="easter"]) {
+  --primary: #8b5cf6;
+  --ring: #8b5cf6;
+  --accent: #f1ecff;
+  --accent-foreground: #6d28d9;
+  --season-highlight: #f59e0b;
+  --season-ink: #3b2a5c;
+  --season-hero: linear-gradient(160deg, #e9dcff 0%, #fde2f0 50%, #d9f5e8 100%);
+}
+
+:root:has([data-season="valentines"]) {
+  --primary: #e11d48;
+  --ring: #e11d48;
+  --accent: #ffe4ea;
+  --accent-foreground: #9f1239;
+  --season-highlight: #fda4af;
+  --season-hero:
+    radial-gradient(90% 80% at 75% 10%, #fb7185 0%, transparent 60%),
+    linear-gradient(180deg, #6b0f2a 0%, #9f1239 60%, #be123c 100%);
+}
+
+:root:has([data-season="june"]) {
+  --primary: #c2410c;
+  --ring: #c2410c;
+  --accent: #fff1e0;
+  --accent-foreground: #9a3412;
+  --season-highlight: #facc15;
+  --season-hero:
+    radial-gradient(100% 70% at 50% 110%, #f97316 0%, transparent 60%),
+    linear-gradient(180deg, #1e1b4b 0%, #4c1d4f 55%, #9a3412 100%);
+}
+
+:root:has([data-season="mothers_day"]) {
+  --primary: #db2777;
+  --ring: #db2777;
+  --accent: #fde7f1;
+  --accent-foreground: #9d174d;
+  --season-highlight: #f9a8d4;
+  --season-ink: #5b1a3a;
+  --season-hero: linear-gradient(170deg, #fde2ec 0%, #fbcfe1 55%, #f5d0fe 100%);
+}
+
+@keyframes season-fly {
+  0% {
+    transform: translate3d(-15vw, 0, 0) scale(var(--s, 1));
+  }
+  25% {
+    transform: translate3d(20vw, -14px, 0) scale(var(--s, 1));
+  }
+  50% {
+    transform: translate3d(55vw, 10px, 0) scale(var(--s, 1));
+  }
+  75% {
+    transform: translate3d(85vw, -8px, 0) scale(var(--s, 1));
+  }
+  100% {
+    transform: translate3d(118vw, 4px, 0) scale(var(--s, 1));
+  }
+}
+
+@keyframes season-flap {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.45);
+  }
+}
+
+@keyframes season-fall {
+  0% {
+    transform: translate3d(0, -24px, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--o, 0.9);
+  }
+  90% {
+    opacity: var(--o, 0.9);
+  }
+  100% {
+    transform: translate3d(var(--drift, 30px), var(--fall, 105vh), 0)
+      rotate(var(--spin, 240deg));
+    opacity: 0;
+  }
+}
+
+@keyframes season-rise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(var(--s, 1));
+    opacity: 0;
+  }
+  15% {
+    opacity: var(--o, 0.85);
+  }
+  100% {
+    transform: translate3d(var(--drift, 20px), -220px, 0) scale(var(--s, 1));
+    opacity: 0;
+  }
+}
+
+@keyframes season-bob {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(var(--tilt, -4deg));
+  }
+  50% {
+    transform: translate3d(0, -8px, 0) rotate(calc(var(--tilt, -4deg) * -1));
+  }
+}
+
+@keyframes season-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes season-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes season-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes season-dangle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(18px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-season-motion] * {
+    animation: none !important;
   }
 }

@@ -16,6 +16,10 @@ import {
   itemsInsertErrorMessage,
 } from "@/lib/services/order-items-check"
 import {
+  estimateDeliveryFeeAction,
+  type DeliveryEstimate,
+} from "@/app/(public)/cardapio/[slug]/actions"
+import {
   manualOrderSchema,
   type ManualOrderInput,
 } from "@/lib/validations/manual-order"
@@ -74,10 +78,10 @@ export type ManualOrderActionState = {
   success?: string
 }
 
-/** Same insert flow as the public checkout, minus the address requirement
- * — meant for phone/in-person orders entered by the store owner. The
- * order_items/orders triggers (snapshotting price and totals) run
- * identically regardless of who inserts the row. */
+/** Same insert flow as the public checkout — meant for phone/in-person
+ * orders entered by the store owner. The order_items/orders triggers
+ * (snapshotting price and totals) run identically regardless of who
+ * inserts the row; the owner is exempt from the opening-hours guard. */
 export async function createManualOrderAction(
   input: ManualOrderInput,
 ): Promise<ManualOrderActionState> {
@@ -103,13 +107,16 @@ export async function createManualOrderAction(
     return { error: itemsCheck.error.replace(" do carrinho", "") }
   }
 
+  const isDelivery = parsed.data.fulfillmentType === "delivery"
+  const address = isDelivery ? parsed.data.address : null
+
   const { data: customerId, error: customerError } = await supabase.rpc(
     "checkout_upsert_customer",
     {
       p_store_id: store.id,
       p_name: parsed.data.customerName,
       p_whatsapp: parsed.data.customerWhatsapp,
-      p_address: null,
+      p_address: address,
     },
   )
 
@@ -124,11 +131,10 @@ export async function createManualOrderAction(
     store_id: store.id,
     customer_id: customerId,
     fulfillment_type: parsed.data.fulfillmentType,
-    delivery_zone_id:
-      parsed.data.fulfillmentType === "delivery"
-        ? parsed.data.deliveryZoneId
-        : null,
+    delivery_zone_id: isDelivery ? parsed.data.deliveryZoneId : null,
+    delivery_address: address,
     payment_preference: parsed.data.paymentMethod,
+    notes: parsed.data.notes || null,
   })
 
   if (orderError) {
@@ -151,8 +157,133 @@ export async function createManualOrderAction(
     return { error: itemsInsertErrorMessage(itemsError.message) }
   }
 
+  if (parsed.data.discountCents > 0) {
+    await applyOrderDiscount(supabase, orderId, parsed.data.discountCents)
+  }
+
   revalidatePath("/pedidos")
   return { success: "Pedido criado" }
+}
+
+export type KnownCustomer = {
+  name: string
+  address: AddressInput | null
+}
+
+/** Pre-fills the manual order form when the owner types a WhatsApp that
+ * already ordered here. Numbers are stored as typed, so both the bare
+ * DDD+number and the 55-prefixed form are tried. */
+export async function lookupCustomerAction(
+  whatsapp: string,
+): Promise<KnownCustomer | null> {
+  const digits = whatsapp.replace(/\D/g, "")
+  if (digits.length < 10) return null
+
+  const supabase = await createClient()
+  const store = await requireOwnedStore(supabase)
+  if (!store) return null
+
+  const variants = new Set([digits])
+  if (digits.startsWith("55") && digits.length >= 12) {
+    variants.add(digits.slice(2))
+  } else {
+    variants.add(`55${digits}`)
+  }
+
+  const { data } = await supabase
+    .from("customers")
+    .select("name, address, updated_at")
+    .eq("store_id", store.id)
+    .in("whatsapp", [...variants])
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ name: string; address: AddressInput | null }>()
+
+  return data ? { name: data.name, address: data.address } : null
+}
+
+/** Same Google Maps radius lookup the storefront uses, for the manual
+ * order form's "calcular taxa" button. */
+export async function estimateManualDeliveryAction(
+  address: AddressInput,
+): Promise<DeliveryEstimate | null> {
+  const supabase = await createClient()
+  const store = await requireOwnedStore(supabase)
+  if (!store) return null
+  return estimateDeliveryFeeAction(store.slug, address)
+}
+
+/** Sets an absolute discount on an order, capped at what the order is
+ * worth. The update is guarded on the totals it was computed from, so a
+ * concurrent item edit can't leave total_cents out of sync. */
+async function applyOrderDiscount(
+  supabase: SupabaseClient,
+  orderId: string,
+  discountCents: number,
+) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: order } = await supabase
+      .from("orders")
+      .select("subtotal_cents, delivery_fee_cents")
+      .eq("id", orderId)
+      .single<{ subtotal_cents: number; delivery_fee_cents: number }>()
+
+    if (!order) return { error: "Pedido não encontrado" }
+
+    const gross = order.subtotal_cents + order.delivery_fee_cents
+    const discount = Math.min(Math.max(discountCents, 0), gross)
+
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update({ discount_cents: discount, total_cents: gross - discount })
+      .eq("id", orderId)
+      .eq("subtotal_cents", order.subtotal_cents)
+      .eq("delivery_fee_cents", order.delivery_fee_cents)
+      .select("total_cents")
+
+    if (error) return { error: "Não foi possível aplicar o desconto" }
+    if (updated && updated.length > 0) {
+      // Keep a still-pending payment record in step with the new total.
+      await supabase
+        .from("payments")
+        .update({ amount_cents: gross - discount })
+        .eq("order_id", orderId)
+        .eq("status", "pending")
+      return { discountCents: discount, totalCents: gross - discount }
+    }
+  }
+  return {
+    error: "O pedido mudou enquanto o desconto era aplicado. Tente de novo.",
+  }
+}
+
+export async function setOrderDiscountAction(
+  orderId: string,
+  discountCents: number,
+): Promise<{ error?: string; discountCents?: number; totalCents?: number }> {
+  if (!Number.isInteger(discountCents) || discountCents < 0) {
+    return { error: "Desconto inválido" }
+  }
+
+  const supabase = await createClient()
+  const store = await requireOwnedStore(supabase)
+  if (!store) return { error: "Loja não encontrada" }
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .eq("store_id", store.id)
+    .single<{ status: OrderStatus }>()
+
+  if (!order) return { error: "Pedido não encontrado" }
+  if (order.status === "cancelled") {
+    return { error: "Reabra o pedido antes de dar desconto" }
+  }
+
+  const result = await applyOrderDiscount(supabase, orderId, discountCents)
+  revalidatePath("/pedidos")
+  return result
 }
 
 export type OrderDetailItem = {
@@ -286,7 +417,10 @@ export async function setOrderPaymentStatusAction(
     .maybeSingle()
 
   if (existing) {
-    await supabase.from("payments").update({ status }).eq("id", existing.id)
+    await supabase
+      .from("payments")
+      .update({ status, amount_cents: amountCents })
+      .eq("id", existing.id)
   } else {
     await supabase.from("payments").insert({
       order_id: orderId,

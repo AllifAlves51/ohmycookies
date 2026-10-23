@@ -7,6 +7,7 @@ import { CategoryManager } from "@/components/admin/products/category-manager"
 import { ProductFormDialog } from "@/components/admin/products/product-form-dialog"
 import { ProductTable } from "@/components/admin/products/product-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { PageHeader } from "@/components/admin/page-header"
 
 export default async function ProdutosPage() {
   const supabase = await createClient()
@@ -39,20 +40,23 @@ export default async function ProdutosPage() {
   const allProducts = products ?? []
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Produtos</h1>
-        <ProductFormDialog
-          mode="create"
-          categories={allCategories}
-          trigger={
-            <Button>
-              <Plus />
-              Novo produto
-            </Button>
-          }
-        />
-      </div>
+    <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
+      <PageHeader
+        title="Produtos"
+        description="Cardápio, preços, destaques e estoque."
+        actions={
+          <ProductFormDialog
+            mode="create"
+            categories={allCategories}
+            trigger={
+              <Button>
+                <Plus />
+                Novo produto
+              </Button>
+            }
+          />
+        }
+      />
 
       <Card>
         <CardHeader>

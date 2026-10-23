@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { PageHeader } from "@/components/admin/page-header"
 
 export default async function EntregaPage() {
   const supabase = await createClient()
@@ -42,8 +43,11 @@ export default async function EntregaPage() {
   const allZones = zones ?? []
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">Entrega</h1>
+    <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
+      <PageHeader
+        title="Entrega"
+        description="Regiões, taxas e tempo estimado de entrega."
+      />
 
       {settings ? (
         <DeliverySettingsForm
@@ -57,10 +61,9 @@ export default async function EntregaPage() {
         <CardHeader>
           <CardTitle>Raio de quilometragem</CardTitle>
           <CardDescription>
-            Nosso sistema mede a distância do trajeto real, não em linha reta
-            do ponto A ao B — quando a chave do Google Maps estiver
-            configurada. Sem ela, o cliente escolhe a faixa manualmente no
-            checkout.
+            Nosso sistema mede a distância do trajeto real, não em linha reta do
+            ponto A ao B — quando a chave do Google Maps estiver configurada.
+            Sem ela, o cliente escolhe a faixa manualmente no checkout.
           </CardDescription>
         </CardHeader>
         <CardContent>

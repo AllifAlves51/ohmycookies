@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { fetchAll } from "@/lib/supabase/fetch-all"
 import type { OrderStatus } from "@/lib/services/order"
 import { addDays, storeDayBounds, storeDayKey } from "@/lib/utils/store-date"
 
@@ -10,11 +11,15 @@ export type DashboardOrder = {
 }
 
 export function getDashboardOrders(supabase: SupabaseClient, storeId: string) {
-  return supabase
-    .from("orders")
-    .select("id, status, total_cents, created_at")
-    .eq("store_id", storeId)
-    .returns<DashboardOrder[]>()
+  return fetchAll((from, to) =>
+    supabase
+      .from("orders")
+      .select("id, status, total_cents, created_at")
+      .eq("store_id", storeId)
+      .order("id")
+      .range(from, to)
+      .returns<DashboardOrder[]>(),
+  )
 }
 
 export function getCustomerCount(supabase: SupabaseClient, storeId: string) {
@@ -30,11 +35,15 @@ export function getDashboardCustomers(
   supabase: SupabaseClient,
   storeId: string,
 ) {
-  return supabase
-    .from("customers")
-    .select("id, created_at")
-    .eq("store_id", storeId)
-    .returns<DashboardCustomer[]>()
+  return fetchAll((from, to) =>
+    supabase
+      .from("customers")
+      .select("id, created_at")
+      .eq("store_id", storeId)
+      .order("id")
+      .range(from, to)
+      .returns<DashboardCustomer[]>(),
+  )
 }
 
 export type TopProductRow = {
@@ -53,13 +62,17 @@ export async function getTopProducts(
   storeId: string,
   limit = 5,
 ) {
-  const { data, error } = await supabase
-    .from("order_items")
-    .select(
-      "product_id, product_name, quantity, orders!inner(store_id, status)",
-    )
-    .eq("orders.store_id", storeId)
-    .neq("orders.status", "cancelled")
+  const { data, error } = await fetchAll((from, to) =>
+    supabase
+      .from("order_items")
+      .select(
+        "product_id, product_name, quantity, orders!inner(store_id, status)",
+      )
+      .eq("orders.store_id", storeId)
+      .neq("orders.status", "cancelled")
+      .order("id")
+      .range(from, to),
+  )
 
   if (error || !data) {
     return { data: null as TopProductRow[] | null, error }

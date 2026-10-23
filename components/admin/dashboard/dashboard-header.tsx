@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/admin/page-header"
 import { UserAvatar } from "@/components/admin/user-avatar"
 import { DashboardDatePicker } from "@/components/admin/dashboard/dashboard-date-picker"
 import { addDays, formatDayKeyLong } from "@/lib/utils/store-date"
@@ -21,17 +22,15 @@ export function DashboardHeader({
   today: string
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Olá, {name}!</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {summaryLine(dayKey, today)}
-        </p>
-      </div>
-      <div className="flex items-center gap-3">
-        <DashboardDatePicker dayKey={dayKey} today={today} />
-        <UserAvatar name={name} avatarUrl={avatarUrl} />
-      </div>
-    </div>
+    <PageHeader
+      title={`Olá, ${name}`}
+      description={summaryLine(dayKey, today)}
+      actions={
+        <>
+          <DashboardDatePicker dayKey={dayKey} today={today} />
+          <UserAvatar name={name} avatarUrl={avatarUrl} />
+        </>
+      }
+    />
   )
 }

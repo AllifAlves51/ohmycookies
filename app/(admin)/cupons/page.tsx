@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { PageHeader } from "@/components/admin/page-header"
 
 export default async function CuponsPage() {
   const supabase = await createClient()
@@ -37,8 +38,11 @@ export default async function CuponsPage() {
   const allCoupons = coupons ?? []
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">Cupons</h1>
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
+      <PageHeader
+        title="Cupons"
+        description="Códigos de desconto que o cliente usa no checkout do cardápio."
+      />
 
       <Card>
         <CardHeader>

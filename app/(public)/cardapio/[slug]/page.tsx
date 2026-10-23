@@ -4,7 +4,7 @@ import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import {
   getStoreBySlug,
-  getStoreSettings,
+  getPublicStoreSettings,
   type Store,
 } from "@/lib/services/store"
 import { getCategories, getProducts } from "@/lib/services/product"
@@ -20,6 +20,8 @@ import { BottomNav } from "@/components/public-menu/bottom-nav"
 import { FloatingCartButton } from "@/components/public-menu/floating-cart-button"
 import { OrderHistorySheet } from "@/components/public-menu/order-history-sheet"
 import { SITE_NAME, getSiteUrl } from "@/lib/site"
+import { isSeasonId, resolveSeason } from "@/lib/seasonal-themes"
+import { SeasonAmbient } from "@/components/public-menu/seasonal/season-decor"
 
 // Shared by generateMetadata and the page so the store is fetched once per request.
 const loadStore = cache(async (slug: string) => {
@@ -138,8 +140,10 @@ function storeJsonLd(store: Store) {
 
 export default async function CardapioPage({
   params,
+  searchParams,
 }: PageProps<"/cardapio/[slug]">) {
   const { slug } = await params
+  const { tema } = await searchParams
   const store = await loadStore(slug)
 
   if (!store) {
@@ -154,13 +158,17 @@ export default async function CardapioPage({
     { data: products },
     { data: deliveryZones },
   ] = await Promise.all([
-    getStoreSettings(supabase, store.id),
+    getPublicStoreSettings(supabase, store.id),
     getCategories(supabase, store.id),
     getProducts(supabase, store.id),
     getDeliveryZones(supabase, store.id),
   ])
 
   const isOpen = isStoreOpenNow(store.opening_hours)
+  // ?tema=halloween previews any season without changing the setting.
+  const season = isSeasonId(tema)
+    ? tema
+    : resolveSeason(settings?.seasonal_theme)
   const activeProducts = (products ?? []).filter((p) => p.active)
   const featuredProducts = activeProducts.filter((p) => p.featured)
   const catalog = Object.fromEntries(
@@ -182,24 +190,33 @@ export default async function CardapioPage({
           __html: JSON.stringify(storeJsonLd(store)).replace(/</g, "\\u003c"),
         }}
       />
-      <div className="mx-auto flex min-h-full w-full max-w-md flex-col pb-20">
-        <StoreHeader store={store} />
-        <StoreInfoBlock store={store} settings={settings} isOpen={isOpen} />
-        <FeaturedCarousel products={featuredProducts} />
-        <MenuContent categories={categories ?? []} products={activeProducts} />
-        <CartBar
-          openingHours={store.opening_hours}
-          initiallyOpen={isOpen}
-          storeSlug={store.slug}
-          storeWhatsapp={store.whatsapp_number}
-          minOrderCents={settings?.min_order_cents ?? 0}
-          pickupEnabled={settings?.pickup_enabled ?? false}
-          deliveryEnabled={settings?.delivery_enabled ?? false}
-          deliveryZones={deliveryZones ?? []}
-        />
-        <OrderHistorySheet storeSlug={store.slug} />
-        <FloatingCartButton />
-        <BottomNav />
+      <div
+        data-season={season ?? undefined}
+        className="relative flex min-h-full flex-col"
+      >
+        {season ? <SeasonAmbient season={season} /> : null}
+        <StoreHeader store={store} season={season} />
+        <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col pb-24">
+          <StoreInfoBlock store={store} settings={settings} isOpen={isOpen} />
+          <FeaturedCarousel products={featuredProducts} season={season} />
+          <MenuContent
+            categories={categories ?? []}
+            products={activeProducts}
+          />
+          <CartBar
+            openingHours={store.opening_hours}
+            initiallyOpen={isOpen}
+            storeSlug={store.slug}
+            storeWhatsapp={store.whatsapp_number}
+            minOrderCents={settings?.min_order_cents ?? 0}
+            pickupEnabled={settings?.pickup_enabled ?? false}
+            deliveryEnabled={settings?.delivery_enabled ?? false}
+            deliveryZones={deliveryZones ?? []}
+          />
+          <OrderHistorySheet storeSlug={store.slug} />
+          <FloatingCartButton />
+          <BottomNav />
+        </div>
       </div>
     </CartProvider>
   )

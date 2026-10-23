@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { fetchAll } from "@/lib/supabase/fetch-all"
 import type { AddressInput } from "@/lib/validations/store"
 import type { OrderStatus } from "@/lib/services/order"
 
@@ -29,21 +30,29 @@ export type CustomerWithStats = Customer & {
 }
 
 export function getCustomers(supabase: SupabaseClient, storeId: string) {
-  return supabase
-    .from("customers")
-    .select("*")
-    .eq("store_id", storeId)
-    .order("created_at", { ascending: false })
-    .returns<Customer[]>()
+  return fetchAll((from, to) =>
+    supabase
+      .from("customers")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .returns<Customer[]>(),
+  )
 }
 
 export function getCustomerOrders(supabase: SupabaseClient, storeId: string) {
-  return supabase
-    .from("orders")
-    .select("id, order_number, status, total_cents, created_at, customer_id")
-    .eq("store_id", storeId)
-    .order("created_at", { ascending: false })
-    .returns<CustomerOrder[]>()
+  return fetchAll((from, to) =>
+    supabase
+      .from("orders")
+      .select("id, order_number, status, total_cents, created_at, customer_id")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .returns<CustomerOrder[]>(),
+  )
 }
 
 /**

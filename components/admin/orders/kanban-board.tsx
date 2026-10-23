@@ -5,6 +5,7 @@ import { Search } from "lucide-react"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import {
+  BOARD_HISTORY_DAYS,
   STATUS_COLUMNS,
   getOrders,
   type OrderStatus,
@@ -23,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
+import { Segmented } from "@/components/ui/segmented"
 import { buildWhatsappLink } from "@/lib/utils/whatsapp"
 import {
   buildStatusMessage,
@@ -35,11 +36,23 @@ const STATUS_LABEL = new Map(STATUS_COLUMNS.map((c) => [c.status, c.label]))
 type FulfillmentFilter = "all" | "delivery" | "pickup"
 type DateFilter = "today" | "7d" | "all"
 
+// Only finished orders (completed/cancelled) are filtered by date: an open
+// order always stays on the board until someone moves it.
 const DATE_OPTIONS = [
-  { value: "today", label: "Hoje" },
-  { value: "7d", label: "Últimos 7 dias" },
-  { value: "all", label: "Todos os pedidos" },
+  { value: "today", label: "Finalizados hoje" },
+  { value: "7d", label: "Finalizados em 7 dias" },
+  { value: "all", label: `Finalizados em ${BOARD_HISTORY_DAYS} dias` },
 ] as const
+
+const FINISHED = new Set<OrderStatus>(["completed", "cancelled"])
+
+const EMPTY_LABEL: Partial<Record<OrderStatus, string>> = {
+  new: "Nenhum pedido novo",
+  preparing: "Nada em preparo",
+  out_for_delivery: "Nenhuma entrega em rota",
+  completed: "Nenhum pedido concluído",
+  cancelled: "Nenhum cancelamento",
+}
 
 function isToday(iso: string) {
   const d = new Date(iso)
@@ -75,7 +88,7 @@ export function KanbanBoard({
   const [search, setSearch] = useState("")
   const [fulfillmentFilter, setFulfillmentFilter] =
     useState<FulfillmentFilter>("all")
-  const [dateFilter, setDateFilter] = useState<DateFilter>("all")
+  const [dateFilter, setDateFilter] = useState<DateFilter>("today")
 
   useOrderFeed(storeId, {
     onInsert: (order) =>
@@ -154,6 +167,15 @@ export function KanbanBoard({
     setOrders((prev) => prev.filter((order) => order.id !== orderId))
   }
 
+  function handleOrderPatched(
+    orderId: string,
+    patch: Partial<OrderWithCustomer>,
+  ) {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, ...patch } : o)),
+    )
+  }
+
   function handleDialogStatusChange(orderId: string, status: OrderStatus) {
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
@@ -171,9 +193,11 @@ export function KanbanBoard({
         return false
       }
 
-      if (dateFilter === "today" && !isToday(order.created_at)) return false
-      if (dateFilter === "7d" && !isWithinDays(order.created_at, 7))
-        return false
+      if (FINISHED.has(order.status)) {
+        if (dateFilter === "today" && !isToday(order.updated_at)) return false
+        if (dateFilter === "7d" && !isWithinDays(order.updated_at, 7))
+          return false
+      }
 
       if (query) {
         const haystack = [
@@ -191,39 +215,26 @@ export function KanbanBoard({
   }, [orders, search, fulfillmentFilter, dateFilter])
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="bg-muted flex gap-1 rounded-lg p-1">
-          {(
-            [
-              { value: "all", label: "Todos" },
-              { value: "delivery", label: "Entrega" },
-              { value: "pickup", label: "Retirada" },
-            ] as const
-          ).map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setFulfillmentFilter(option.value)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                fulfillmentFilter === option.value
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pt-5 pb-4 sm:px-8">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <Segmented
+          aria-label="Tipo de pedido"
+          value={fulfillmentFilter}
+          onChange={setFulfillmentFilter}
+          options={[
+            ["all", "Todos"],
+            ["delivery", "Entrega"],
+            ["pickup", "Retirada"],
+          ]}
+        />
 
-        <div className="relative min-w-56 flex-1">
+        <div className="relative min-w-56 flex-1 sm:max-w-sm">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Pesquise pelo nome do cliente ou código do pedido"
-            className="rounded-lg pl-9"
+            placeholder="Buscar por cliente, telefone ou nº do pedido"
+            className="bg-card h-9 pl-9"
           />
         </div>
 
@@ -232,7 +243,7 @@ export function KanbanBoard({
           onValueChange={(value) => value && setDateFilter(value as DateFilter)}
           items={DATE_OPTIONS}
         >
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="bg-card ml-auto h-9 w-52">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -245,16 +256,21 @@ export function KanbanBoard({
         </Select>
       </div>
 
-      <div className="flex h-[calc(100vh-220px)] min-h-80 gap-3 overflow-x-auto pb-2">
+      <div className="-mx-4 flex h-[calc(100vh-210px)] min-h-96 gap-3 overflow-x-auto px-4 pb-2 sm:-mx-8 sm:px-8">
         {STATUS_COLUMNS.filter((column) => column.status !== "confirmed").map(
-          ({ status, label, headerClassName, columnClassName }) => (
+          ({ status, label, dotClassName }) => (
             <KanbanColumn
               key={status}
               status={status}
               label={label}
-              headerClassName={headerClassName}
-              columnClassName={columnClassName}
-              orders={filteredOrders.filter((order) => order.status === status)}
+              dotClassName={dotClassName}
+              emptyLabel={EMPTY_LABEL[status] ?? "Vazio"}
+              // "confirmed" has no column of its own: it sits with "new".
+              orders={filteredOrders.filter(
+                (order) =>
+                  order.status === status ||
+                  (status === "new" && order.status === "confirmed"),
+              )}
               onOpenOrder={setOpenOrderId}
               onDragStart={setDraggingOrderId}
               onDrop={(dropStatus) => {
@@ -282,6 +298,7 @@ export function KanbanBoard({
           }}
           onStatusChange={handleDialogStatusChange}
           onDeleted={handleOrderDeleted}
+          onPatched={handleOrderPatched}
         />
       ) : null}
     </div>

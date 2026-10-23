@@ -92,7 +92,7 @@ export default async function DashboardPage({
       : null
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
       <DashboardHeader
         name={name}
         avatarUrl={avatarUrl}
@@ -100,7 +100,7 @@ export default async function DashboardPage({
         today={today}
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
           label={isToday ? "Faturamento hoje" : "Faturamento do dia"}
           value={formatBRL(dayStats.revenueCents)}

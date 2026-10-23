@@ -15,7 +15,7 @@ export function OpeningHoursDisclosure({
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div className="bg-muted rounded-xl">
+    <div className="bg-muted/60 rounded-xl border border-transparent">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -25,10 +25,14 @@ export function OpeningHoursDisclosure({
           <span
             className={cn(
               "size-2 rounded-full",
-              isOpen ? "bg-green-500" : "bg-gray-400",
+              isOpen
+                ? "bg-emerald-500 shadow-[0_0_0_3px_rgb(16_185_129/0.18)]"
+                : "bg-stone-400",
             )}
           />
-          {isOpen ? "Aberto agora" : "Fechado no momento"}
+          <span className="font-medium">
+            {isOpen ? "Aberto agora" : "Fechado no momento"}
+          </span>
         </span>
         <span className="text-primary flex items-center gap-1 text-xs font-medium">
           Ver horários
@@ -47,7 +51,9 @@ export function OpeningHoursDisclosure({
             return (
               <li key={day.key} className="flex justify-between">
                 <span className="text-muted-foreground">{day.label}</span>
-                <span>{hours.open ? `${hours.from} - ${hours.to}` : "Fechado"}</span>
+                <span>
+                  {hours.open ? `${hours.from} - ${hours.to}` : "Fechado"}
+                </span>
               </li>
             )
           })}

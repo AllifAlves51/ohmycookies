@@ -25,11 +25,11 @@ export function MobileNav({ storeName }: { storeName: string }) {
       >
         <Menu />
       </SheetTrigger>
-      <SheetContent side="left" className="w-64">
+      <SheetContent side="left" className="bg-sidebar w-64">
         <SheetHeader>
           <SheetTitle>{storeName}</SheetTitle>
         </SheetHeader>
-        <div className="flex flex-1 flex-col justify-between px-4 pb-4">
+        <div className="flex flex-1 flex-col justify-between px-2.5 pb-4">
           <SidebarNav onNavigate={() => setOpen(false)} />
           <LogoutButton className="w-full justify-start" />
         </div>

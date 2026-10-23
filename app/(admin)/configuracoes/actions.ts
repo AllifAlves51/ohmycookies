@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
+import {
+  IMAGE_TYPE_ERROR,
+  imageExtension,
+  isAllowedImage,
+} from "@/lib/utils/image-upload"
 import { createClient } from "@/lib/supabase/server"
 import { reaisToCents } from "@/lib/utils/money"
 import {
@@ -18,6 +23,7 @@ import {
 } from "@/lib/services/store"
 import { geocodeAddress } from "@/lib/services/maps"
 import { formatAddress } from "@/lib/utils/address"
+import { isSeasonalThemeSetting } from "@/lib/seasonal-themes"
 
 export type SettingsActionState = {
   error?: string
@@ -217,8 +223,8 @@ export async function uploadLogoAction(
     return { error: "Selecione uma imagem" }
   }
 
-  if (!file.type.startsWith("image/")) {
-    return { error: "O arquivo precisa ser uma imagem" }
+  if (!isAllowedImage(file)) {
+    return { error: IMAGE_TYPE_ERROR }
   }
 
   if (file.size > 2 * 1024 * 1024) {
@@ -232,12 +238,12 @@ export async function uploadLogoAction(
     return { error: "Loja não encontrada" }
   }
 
-  const extension = file.name.split(".").pop() ?? "png"
+  const extension = imageExtension(file)
   const path = `${store.id}/logo-${Date.now()}.${extension}`
 
   const { error: uploadError } = await supabase.storage
     .from("store-logos")
-    .upload(path, file, { upsert: true })
+    .upload(path, file, { upsert: true, contentType: file.type })
 
   if (uploadError) {
     return { error: "Não foi possível enviar a imagem. Tente novamente." }
@@ -270,8 +276,8 @@ export async function uploadAvatarAction(
     return { error: "Selecione uma imagem" }
   }
 
-  if (!file.type.startsWith("image/")) {
-    return { error: "O arquivo precisa ser uma imagem" }
+  if (!isAllowedImage(file)) {
+    return { error: IMAGE_TYPE_ERROR }
   }
 
   if (file.size > 2 * 1024 * 1024) {
@@ -293,7 +299,7 @@ export async function uploadAvatarAction(
     return { error: "Loja não encontrada" }
   }
 
-  const extension = file.name.split(".").pop() ?? "jpg"
+  const extension = imageExtension(file)
   const path = `${store.id}/avatar-${Date.now()}.${extension}`
 
   const { error: uploadError } = await supabase.storage
@@ -331,8 +337,8 @@ export async function uploadLoginPhotoAction(
     return { error: "Selecione uma imagem" }
   }
 
-  if (!file.type.startsWith("image/")) {
-    return { error: "O arquivo precisa ser uma imagem" }
+  if (!isAllowedImage(file)) {
+    return { error: IMAGE_TYPE_ERROR }
   }
 
   if (file.size > 4 * 1024 * 1024) {
@@ -346,7 +352,7 @@ export async function uploadLoginPhotoAction(
     return { error: "Loja não encontrada" }
   }
 
-  const extension = file.name.split(".").pop() ?? "jpg"
+  const extension = imageExtension(file)
   const path = `${store.id}/login-photo-${Date.now()}.${extension}`
 
   const { error: uploadError } = await supabase.storage
@@ -373,4 +379,35 @@ export async function uploadLoginPhotoAction(
   revalidatePath("/login")
   revalidatePath("/cadastro")
   return { success: "Foto da tela de login atualizada" }
+}
+
+export async function updateSeasonalThemeAction(
+  theme: string,
+): Promise<SettingsActionState> {
+  if (!isSeasonalThemeSetting(theme)) {
+    return { error: "Tema inválido" }
+  }
+
+  const supabase = await createClient()
+  const store = await requireOwnedStore(supabase)
+
+  if (!store) {
+    return { error: "Loja não encontrada" }
+  }
+
+  const { error } = await updateStoreSettings(supabase, store.id, {
+    seasonal_theme: theme,
+  })
+
+  if (error) {
+    return {
+      error: error.message.includes("seasonal_theme")
+        ? "Rode a migração 20261023120000_security_hardening_and_themes.sql no Supabase para liberar os temas."
+        : "Não foi possível salvar o tema. Tente novamente.",
+    }
+  }
+
+  revalidatePath("/configuracoes")
+  revalidatePath(`/cardapio/${store.slug}`)
+  return { success: "Tema atualizado" }
 }

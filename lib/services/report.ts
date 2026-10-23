@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { fetchAll } from "@/lib/supabase/fetch-all"
 import type { DashboardOrder } from "@/lib/services/dashboard"
 import type { OrderStatus, PaymentPreference } from "@/lib/services/order"
 import { addDays, storeDayKey } from "@/lib/utils/store-date"
@@ -11,13 +12,17 @@ export function getOrdersInRange(
   from: Date,
   to: Date,
 ) {
-  return supabase
-    .from("orders")
-    .select("id, status, total_cents, delivery_fee_cents, created_at")
-    .eq("store_id", storeId)
-    .gte("created_at", from.toISOString())
-    .lte("created_at", to.toISOString())
-    .returns<ReportOrder[]>()
+  return fetchAll((start, end) =>
+    supabase
+      .from("orders")
+      .select("id, status, total_cents, delivery_fee_cents, created_at")
+      .eq("store_id", storeId)
+      .gte("created_at", from.toISOString())
+      .lte("created_at", to.toISOString())
+      .order("id")
+      .range(start, end)
+      .returns<ReportOrder[]>(),
+  )
 }
 
 export type ProductSoldRow = {
@@ -38,15 +43,19 @@ export async function getProductsSoldInRange(
   from: Date,
   to: Date,
 ) {
-  const { data, error } = await supabase
-    .from("order_items")
-    .select(
-      "product_id, product_name, quantity, subtotal_cents, orders!inner(store_id, status, created_at)",
-    )
-    .eq("orders.store_id", storeId)
-    .neq("orders.status", "cancelled")
-    .gte("orders.created_at", from.toISOString())
-    .lte("orders.created_at", to.toISOString())
+  const { data, error } = await fetchAll((start, end) =>
+    supabase
+      .from("order_items")
+      .select(
+        "product_id, product_name, quantity, subtotal_cents, orders!inner(store_id, status, created_at)",
+      )
+      .eq("orders.store_id", storeId)
+      .neq("orders.status", "cancelled")
+      .gte("orders.created_at", from.toISOString())
+      .lte("orders.created_at", to.toISOString())
+      .order("id")
+      .range(start, end),
+  )
 
   if (error || !data) {
     return { data: null as ProductSoldRow[] | null, error }
@@ -90,15 +99,19 @@ export async function getRevenueByCategoryInRange(
   from: Date,
   to: Date,
 ) {
-  const { data, error } = await supabase
-    .from("order_items")
-    .select(
-      "subtotal_cents, products(category:categories(name)), orders!inner(store_id, status, created_at)",
-    )
-    .eq("orders.store_id", storeId)
-    .neq("orders.status", "cancelled")
-    .gte("orders.created_at", from.toISOString())
-    .lte("orders.created_at", to.toISOString())
+  const { data, error } = await fetchAll((start, end) =>
+    supabase
+      .from("order_items")
+      .select(
+        "subtotal_cents, products(category:categories(name)), orders!inner(store_id, status, created_at)",
+      )
+      .eq("orders.store_id", storeId)
+      .neq("orders.status", "cancelled")
+      .gte("orders.created_at", from.toISOString())
+      .lte("orders.created_at", to.toISOString())
+      .order("id")
+      .range(start, end),
+  )
 
   if (error || !data) {
     return { data: null as RevenueByCategoryRow[] | null, error }
@@ -131,13 +144,17 @@ export function getOrdersPaymentInRange(
   from: Date,
   to: Date,
 ) {
-  return supabase
-    .from("orders")
-    .select("payment_preference, status")
-    .eq("store_id", storeId)
-    .gte("created_at", from.toISOString())
-    .lte("created_at", to.toISOString())
-    .returns<OrderPaymentRow[]>()
+  return fetchAll((start, end) =>
+    supabase
+      .from("orders")
+      .select("payment_preference, status")
+      .eq("store_id", storeId)
+      .gte("created_at", from.toISOString())
+      .lte("created_at", to.toISOString())
+      .order("id")
+      .range(start, end)
+      .returns<OrderPaymentRow[]>(),
+  )
 }
 
 export type PaymentBreakdownRow = { method: PaymentPreference; count: number }

@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
+import {
+  IMAGE_TYPE_ERROR,
+  imageExtension,
+  isAllowedImage,
+} from "@/lib/utils/image-upload"
 import { createClient } from "@/lib/supabase/server"
 import { reaisToCents } from "@/lib/utils/money"
 import {
@@ -59,12 +64,12 @@ async function uploadProductImage(
   productId: string,
   file: File,
 ) {
-  const extension = file.name.split(".").pop() ?? "jpg"
+  const extension = imageExtension(file)
   const path = `${storeId}/${productId}/image-${Date.now()}.${extension}`
 
   const { error } = await supabase.storage
     .from("product-images")
-    .upload(path, file, { upsert: true })
+    .upload(path, file, { upsert: true, contentType: file.type })
 
   if (error) {
     return null
@@ -130,11 +135,15 @@ export async function createProductAction(
   }
 
   const imageFile = formData.get("image")
+  if (imageFile instanceof File && imageFile.size > 4 * 1024 * 1024) {
+    return { error: "A imagem deve ter no máximo 4MB" }
+  }
   if (
     imageFile instanceof File &&
-    imageFile.size > 4 * 1024 * 1024
+    imageFile.size > 0 &&
+    !isAllowedImage(imageFile)
   ) {
-    return { error: "A imagem deve ter no máximo 4MB" }
+    return { error: IMAGE_TYPE_ERROR }
   }
 
   const supabase = await createClient()
@@ -200,11 +209,15 @@ export async function updateProductAction(
   }
 
   const imageFile = formData.get("image")
+  if (imageFile instanceof File && imageFile.size > 4 * 1024 * 1024) {
+    return { error: "A imagem deve ter no máximo 4MB" }
+  }
   if (
     imageFile instanceof File &&
-    imageFile.size > 4 * 1024 * 1024
+    imageFile.size > 0 &&
+    !isAllowedImage(imageFile)
   ) {
-    return { error: "A imagem deve ter no máximo 4MB" }
+    return { error: IMAGE_TYPE_ERROR }
   }
 
   const supabase = await createClient()

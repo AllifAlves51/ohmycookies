@@ -3,7 +3,7 @@
 import { after } from "next/server"
 import { notifyNewOrder } from "@/lib/whatsapp-bot"
 import { createClient } from "@/lib/supabase/server"
-import { getStoreBySlug, getStoreSettings } from "@/lib/services/store"
+import { getStoreBySlug, getPublicStoreSettings } from "@/lib/services/store"
 import { getOrderTracking, type OrderTracking } from "@/lib/services/order"
 import {
   getDeliveryZones,
@@ -194,7 +194,7 @@ export async function estimateDeliveryFeeAction(
   const { data: store } = await getStoreBySlug(supabase, storeSlug)
   if (!store) return null
 
-  const { data: settings } = await getStoreSettings(supabase, store.id)
+  const { data: settings } = await getPublicStoreSettings(supabase, store.id)
   if (settings?.latitude == null || settings?.longitude == null) return null
 
   const destination = await geocodeAddress(formatAddress(address))
