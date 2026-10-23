@@ -4,8 +4,23 @@
     {
       "name": "ohmycookies",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "nandalanches",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "G:/CLAUDE PROJETOS/NANDALANCHES/node_modules/next/dist/bin/next",
+        "dev",
+        "G:/CLAUDE PROJETOS/NANDALANCHES",
+        "--port",
+        "3001"
+      ],
+      "port": 3001
     }
   ]
 }
