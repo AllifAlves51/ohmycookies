@@ -7,6 +7,7 @@ import { getDeliveryZones } from "@/lib/services/delivery"
 import { KanbanBoard } from "@/components/admin/orders/kanban-board"
 import { NewOrderDialog } from "@/components/admin/orders/new-order-dialog"
 import { PageHeader } from "@/components/admin/page-header"
+import { AutoPrintToggle } from "@/components/admin/orders/auto-print-toggle"
 
 export default async function PedidosPage() {
   const supabase = await createClient()
@@ -49,12 +50,15 @@ export default async function PedidosPage() {
           title="Pedidos"
           description="Acompanhe e mova os pedidos em tempo real."
           actions={
-            <NewOrderDialog
-              products={products ?? []}
-              deliveryZones={deliveryZones ?? []}
-              storeCity={store.address?.city ?? ""}
-              storeState={store.address?.state ?? ""}
-            />
+            <>
+              <AutoPrintToggle />
+              <NewOrderDialog
+                products={products ?? []}
+                deliveryZones={deliveryZones ?? []}
+                storeCity={store.address?.city ?? ""}
+                storeState={store.address?.state ?? ""}
+              />
+            </>
           }
         />
       </div>

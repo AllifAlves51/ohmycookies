@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Printer, X } from "lucide-react"
+import { PRINTED_MESSAGE } from "@/lib/auto-print"
 
 type Width = "80mm" | "58mm"
 const STORAGE_KEY = "ohmycookies:print-width"
@@ -52,8 +53,24 @@ export function PrintControls() {
     applyWidth(saved)
     // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the toggle with the width saved on this computer (not readable during SSR).
     setWidth(saved)
+
+    // Loaded inside the panel's hidden frame for automatic printing: tell
+    // the panel when the job is done so it can print the next ticket.
+    const embedded = window.parent !== window
+    function notifyParent() {
+      if (embedded) {
+        window.parent.postMessage(
+          { type: PRINTED_MESSAGE },
+          window.location.origin,
+        )
+      }
+    }
+    window.addEventListener("afterprint", notifyParent)
     const timer = setTimeout(() => window.print(), 300)
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener("afterprint", notifyParent)
+    }
   }, [])
 
   function choose(next: Width) {

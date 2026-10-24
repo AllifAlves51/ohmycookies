@@ -8,6 +8,7 @@ import { StoreInfoForm } from "@/components/admin/settings/store-info-form"
 import { StoreLinksForm } from "@/components/admin/settings/store-links-form"
 import { OpeningHoursForm } from "@/components/admin/settings/opening-hours-form"
 import { OrderSettingsForm } from "@/components/admin/settings/order-settings-form"
+import { AutoPrintCard } from "@/components/admin/settings/auto-print-card"
 import { SeasonalThemeForm } from "@/components/admin/settings/seasonal-theme-form"
 import { PageHeader } from "@/components/admin/page-header"
 import { isSeasonalThemeSetting } from "@/lib/seasonal-themes"
@@ -35,6 +36,13 @@ export default async function ConfiguracoesPage() {
   }
 
   const { data: settings } = await getStoreSettings(supabase, store.id)
+  const { data: latestOrder } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("store_id", store.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string }>()
   const theme = settings?.seasonal_theme
   const avatarUrl =
     typeof user.user_metadata?.avatar_url === "string"
@@ -57,6 +65,7 @@ export default async function ConfiguracoesPage() {
       <StoreLinksForm store={store} />
       <OpeningHoursForm openingHours={store.opening_hours} />
       {settings ? <OrderSettingsForm settings={settings} /> : null}
+      <AutoPrintCard latestOrderId={latestOrder?.id ?? null} />
       <SeasonalThemeForm
         storeSlug={store.slug}
         available={settings?.seasonal_theme !== undefined}

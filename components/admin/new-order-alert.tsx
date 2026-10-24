@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation"
 import { BellRing, MonitorDown } from "lucide-react"
 import { toast } from "sonner"
 import { useOrderFeed } from "@/components/admin/use-order-feed"
+import { autoPrintOrder } from "@/lib/auto-print"
 
 /** Keeps ringing until someone acknowledges it (click/key on the panel or
  * "Ver pedidos"), like a delivery-app tablet — capped so a forgotten tab
@@ -257,6 +258,7 @@ export function NewOrderAlert({ storeId }: { storeId: string }) {
   useOrderFeed(storeId, {
     onInsert: (order) => {
       startRinging(order.order_number)
+      autoPrintOrder(order.id)
 
       toast.success(`Novo pedido #${order.order_number}`, {
         description: order.customer?.name
