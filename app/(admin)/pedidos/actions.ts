@@ -20,6 +20,7 @@ import {
   type DeliveryEstimate,
 } from "@/app/(public)/cardapio/[slug]/actions"
 import {
+  manualAddressSchema,
   manualOrderSchema,
   type ManualOrderInput,
 } from "@/lib/validations/manual-order"
@@ -453,12 +454,91 @@ export async function deleteOrderAction(orderId: string) {
 export type EditOrderInput = {
   items: { id: string | null; productId: string | null; quantity: number }[]
   paymentMethod: PaymentPreference
+  fulfillmentType: "delivery" | "pickup"
+  /** Required for deliveries; ignored for pickup. */
+  deliveryZoneId: string | null
   address: AddressInput | null
+}
+
+type FulfillmentRow = {
+  fulfillment_type: "delivery" | "pickup"
+  delivery_zone_id: string | null
+  subtotal_cents: number
+  discount_cents: number
+}
+
+/** Switches an order between pickup and delivery (or to another delivery
+ * region). The snapshot trigger only runs on insert, so the zone name,
+ * fee and ETA are stamped here — with the same free-delivery rule as
+ * recalc_order_totals — and the update is guarded on the subtotal it was
+ * computed from. */
+async function applyFulfillment(
+  supabase: SupabaseClient,
+  storeId: string,
+  orderId: string,
+  input: EditOrderInput,
+  zone: {
+    id: string
+    name: string
+    fee_cents: number
+    estimated_time_minutes: number
+  } | null,
+) {
+  const { data: settings } = await supabase
+    .from("store_settings")
+    .select("free_delivery_threshold_cents")
+    .eq("store_id", storeId)
+    .maybeSingle<{ free_delivery_threshold_cents: number | null }>()
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: order } = await supabase
+      .from("orders")
+      .select("subtotal_cents, discount_cents")
+      .eq("id", orderId)
+      .single<Pick<FulfillmentRow, "subtotal_cents" | "discount_cents">>()
+    if (!order) return "Pedido não encontrado"
+
+    const threshold = settings?.free_delivery_threshold_cents ?? null
+    const fee =
+      zone && !(threshold !== null && order.subtotal_cents >= threshold)
+        ? zone.fee_cents
+        : 0
+    const gross = order.subtotal_cents + fee
+    const discount = Math.min(order.discount_cents, gross)
+
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update({
+        fulfillment_type: zone ? "delivery" : "pickup",
+        delivery_zone_id: zone?.id ?? null,
+        delivery_zone_name: zone?.name ?? null,
+        delivery_zone_fee_cents: zone?.fee_cents ?? 0,
+        delivery_estimated_minutes: zone?.estimated_time_minutes ?? null,
+        delivery_address: zone ? input.address : null,
+        delivery_fee_cents: fee,
+        discount_cents: discount,
+        total_cents: gross - discount,
+      })
+      .eq("id", orderId)
+      .eq("subtotal_cents", order.subtotal_cents)
+      .select("total_cents")
+
+    if (error) return "Não foi possível trocar o tipo de entrega."
+    if (updated && updated.length > 0) {
+      await supabase
+        .from("payments")
+        .update({ amount_cents: gross - discount })
+        .eq("order_id", orderId)
+        .eq("status", "pending")
+      return null
+    }
+  }
+  return "O pedido mudou enquanto era salvo. Tente de novo."
 }
 
 /** Replaces an order's items, payment method and (for deliveries) address
  * in one database transaction — totals, delivery fee and stock follow via
- * triggers. */
+ * triggers. A change of pickup/delivery or region is applied right after. */
 export async function updateOrderAction(
   orderId: string,
   input: EditOrderInput,
@@ -477,10 +557,62 @@ export async function updateOrderAction(
     return { error: "Quantidade inválida" }
   }
 
+  const isDelivery = input.fulfillmentType === "delivery"
+  if (isDelivery) {
+    if (!input.deliveryZoneId) {
+      return { error: "Selecione a região de entrega" }
+    }
+    const address = manualAddressSchema.safeParse(input.address)
+    if (!address.success) {
+      return {
+        error: address.error.issues[0]?.message ?? "Endereço inválido",
+      }
+    }
+    input = { ...input, address: address.data }
+  }
+
   const supabase = await createClient()
   const store = await requireOwnedStore(supabase)
   if (!store) {
     return { error: "Loja não encontrada" }
+  }
+
+  const { data: current } = await supabase
+    .from("orders")
+    .select(
+      "fulfillment_type, delivery_zone_id, subtotal_cents, discount_cents",
+    )
+    .eq("id", orderId)
+    .eq("store_id", store.id)
+    .single<FulfillmentRow>()
+  if (!current) {
+    return { error: "Pedido não encontrado" }
+  }
+
+  const fulfillmentChanged =
+    current.fulfillment_type !== input.fulfillmentType ||
+    (isDelivery && current.delivery_zone_id !== input.deliveryZoneId)
+
+  // Checked before touching anything, so a bad region never leaves the
+  // items saved but the switch undone.
+  let zone: {
+    id: string
+    name: string
+    fee_cents: number
+    estimated_time_minutes: number
+  } | null = null
+  if (isDelivery && fulfillmentChanged) {
+    const { data } = await supabase
+      .from("delivery_zones")
+      .select("id, name, fee_cents, estimated_time_minutes")
+      .eq("id", input.deliveryZoneId!)
+      .eq("store_id", store.id)
+      .eq("active", true)
+      .maybeSingle()
+    if (!data) {
+      return { error: "Região de entrega inválida ou inativa" }
+    }
+    zone = data
   }
 
   const { error } = await supabase.rpc("admin_update_order", {
@@ -507,6 +639,20 @@ export async function updateOrderAction(
         : error.message.includes("Produto inválido")
           ? "Um dos produtos adicionados não está disponível."
           : "Não foi possível salvar as alterações. Tente novamente.",
+    }
+  }
+
+  if (fulfillmentChanged) {
+    const fulfillmentError = await applyFulfillment(
+      supabase,
+      store.id,
+      orderId,
+      input,
+      zone,
+    )
+    if (fulfillmentError) {
+      revalidatePath("/pedidos")
+      return { error: `Itens salvos, mas: ${fulfillmentError}` }
     }
   }
 

@@ -16,6 +16,7 @@ import { useOrderFeed } from "@/components/admin/use-order-feed"
 import { KanbanColumn } from "@/components/admin/orders/kanban-column"
 import { OrderDetailDialog } from "@/components/admin/orders/order-detail-dialog"
 import type { Product } from "@/lib/services/product"
+import type { DeliveryZone } from "@/lib/services/delivery"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -75,6 +76,9 @@ export function KanbanBoard({
   storeName,
   templates,
   products,
+  deliveryZones,
+  storeCity,
+  storeState,
   initialOrders,
 }: {
   storeId: string
@@ -82,6 +86,9 @@ export function KanbanBoard({
   storeName: string
   templates: WhatsappTemplates
   products: Product[]
+  deliveryZones: DeliveryZone[]
+  storeCity: string
+  storeState: string
   initialOrders: OrderWithCustomer[]
 }) {
   const [orders, setOrders] = useState(initialOrders)
@@ -292,6 +299,9 @@ export function KanbanBoard({
           storeName={storeName}
           templates={templates}
           products={products}
+          deliveryZones={deliveryZones}
+          storeCity={storeCity}
+          storeState={storeState}
           open
           onOpenChange={(open) => {
             if (!open) setOpenOrderId(null)

@@ -68,6 +68,9 @@ export default async function PedidosPage() {
         storeName={store.name}
         templates={resolveTemplates(settings?.whatsapp_templates)}
         products={products ?? []}
+        deliveryZones={deliveryZones ?? []}
+        storeCity={store.address?.city ?? ""}
+        storeState={store.address?.state ?? ""}
         initialOrders={orders ?? []}
       />
     </main>

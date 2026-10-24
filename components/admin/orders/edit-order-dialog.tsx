@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Minus, Plus, Trash2 } from "lucide-react"
+import { Minus, Plus, Store, Trash2, Truck } from "lucide-react"
 import { toast } from "sonner"
 import {
   updateOrderAction,
@@ -9,11 +9,13 @@ import {
 } from "@/app/(admin)/pedidos/actions"
 import type { OrderWithCustomer, PaymentPreference } from "@/lib/services/order"
 import type { Product } from "@/lib/services/product"
+import type { DeliveryZone } from "@/lib/services/delivery"
 import type { AddressInput } from "@/lib/validations/store"
 import { formatBRL } from "@/lib/utils/money"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Segmented } from "@/components/ui/segmented"
 import {
   Select,
   SelectContent,
@@ -46,20 +48,25 @@ const PAYMENT_OPTIONS: [PaymentPreference, string][] = [
   ["card", "Cartão"],
 ]
 
-const EMPTY_ADDRESS: AddressInput = {
-  street: "",
-  number: "",
-  neighborhood: "",
-  complement: "",
-  city: "Primavera do Leste",
-  state: "MT",
-  zip: "",
+function emptyAddress(city: string, state: string): AddressInput {
+  return {
+    street: "",
+    number: "",
+    neighborhood: "",
+    complement: "",
+    city,
+    state,
+    zip: "",
+  }
 }
 
 export function EditOrderDialog({
   order,
   items,
   products,
+  deliveryZones,
+  storeCity,
+  storeState,
   open,
   onOpenChange,
   onSaved,
@@ -67,6 +74,9 @@ export function EditOrderDialog({
   order: OrderWithCustomer
   items: OrderDetailItem[]
   products: Product[]
+  deliveryZones: DeliveryZone[]
+  storeCity: string
+  storeState: string
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved: () => void
@@ -83,14 +93,20 @@ export function EditOrderDialog({
   const [payment, setPayment] = useState<PaymentPreference>(
     order.payment_preference ?? "pix",
   )
+  const [fulfillment, setFulfillment] = useState(order.fulfillment_type)
+  const [zoneId, setZoneId] = useState(order.delivery_zone_id ?? "")
   const [address, setAddress] = useState<AddressInput>(
-    order.delivery_address ?? EMPTY_ADDRESS,
+    order.delivery_address ??
+      emptyAddress(storeCity || "Primavera do Leste", storeState || "MT"),
   )
   const [productToAdd, setProductToAdd] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isSaving, startSaving] = useTransition()
 
-  const isDelivery = order.fulfillment_type === "delivery"
+  const isDelivery = fulfillment === "delivery"
+  const activeZones = deliveryZones.filter(
+    (z) => z.active || z.id === order.delivery_zone_id,
+  )
   const activeProducts = products.filter((p) => p.active)
   const subtotal = rows.reduce(
     (sum, r) => sum + r.unitPriceCents * r.quantity,
@@ -133,6 +149,10 @@ export function EditOrderDialog({
       setError("O pedido precisa ter ao menos um item.")
       return
     }
+    if (isDelivery && !zoneId) {
+      setError("Selecione a região de entrega.")
+      return
+    }
     if (
       isDelivery &&
       (!address.street.trim() ||
@@ -151,6 +171,8 @@ export function EditOrderDialog({
           quantity: row.quantity,
         })),
         paymentMethod: payment,
+        fulfillmentType: fulfillment,
+        deliveryZoneId: isDelivery ? zoneId : null,
         address: isDelivery ? address : null,
       })
       if (result.error) {
@@ -285,11 +307,58 @@ export function EditOrderDialog({
             </div>
           </fieldset>
 
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">Tipo de pedido</legend>
+            <Segmented
+              aria-label="Tipo de pedido"
+              value={fulfillment}
+              onChange={setFulfillment}
+              options={[
+                [
+                  "pickup",
+                  <>
+                    <Store />
+                    Retirada
+                  </>,
+                ],
+                [
+                  "delivery",
+                  <>
+                    <Truck />
+                    Entrega
+                  </>,
+                ],
+              ]}
+            />
+          </fieldset>
+
           {isDelivery ? (
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">
                 Endereço de entrega
               </legend>
+              <div className="space-y-1">
+                <Label htmlFor="edit-zone">Região / taxa</Label>
+                <Select
+                  value={zoneId}
+                  onValueChange={(value) => setZoneId(value ?? "")}
+                  items={activeZones.map((z) => ({
+                    value: z.id,
+                    label: `${z.name} — ${formatBRL(z.fee_cents)}`,
+                  }))}
+                >
+                  <SelectTrigger id="edit-zone" className="w-full">
+                    <SelectValue placeholder="Selecione a região" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeZones.map((z) => (
+                      <SelectItem key={z.id} value={z.id}>
+                        {z.name} — {formatBRL(z.fee_cents)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-[1fr_90px] gap-2">
                 <div className="space-y-1">
                   <Label htmlFor="edit-street">Rua</Label>
@@ -335,7 +404,8 @@ export function EditOrderDialog({
                 </div>
               </div>
               <p className="text-muted-foreground text-xs">
-                A região e a taxa de entrega não mudam ao editar o endereço.
+                A taxa segue a região escolhida (com frete grátis, se a loja
+                tiver configurado).
               </p>
             </fieldset>
           ) : null}

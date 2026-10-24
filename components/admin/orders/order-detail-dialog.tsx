@@ -38,6 +38,7 @@ import {
   type WhatsappTemplates,
 } from "@/lib/whatsapp-templates"
 import type { Product } from "@/lib/services/product"
+import type { DeliveryZone } from "@/lib/services/delivery"
 import { EditOrderDialog } from "@/components/admin/orders/edit-order-dialog"
 import {
   DiscountField,
@@ -89,6 +90,9 @@ export function OrderDetailDialog({
   storeName,
   templates,
   products,
+  deliveryZones,
+  storeCity,
+  storeState,
   open,
   onOpenChange,
   onStatusChange,
@@ -100,6 +104,9 @@ export function OrderDetailDialog({
   storeName: string
   templates: WhatsappTemplates
   products: Product[]
+  deliveryZones: DeliveryZone[]
+  storeCity: string
+  storeState: string
   open: boolean
   onOpenChange: (open: boolean) => void
   onStatusChange?: (orderId: string, status: OrderStatus) => void
@@ -593,6 +600,9 @@ export function OrderDetailDialog({
               order={order}
               items={detail.items}
               products={products}
+              deliveryZones={deliveryZones}
+              storeCity={storeCity}
+              storeState={storeState}
               open={editOpen}
               onOpenChange={setEditOpen}
               onSaved={() => {

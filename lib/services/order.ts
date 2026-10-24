@@ -75,6 +75,7 @@ export type Order = {
   order_number: number
   status: OrderStatus
   fulfillment_type: "delivery" | "pickup"
+  delivery_zone_id: string | null
   delivery_zone_name: string | null
   delivery_estimated_minutes: number | null
   delivery_address: AddressInput | null
