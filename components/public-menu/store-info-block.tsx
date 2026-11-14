@@ -1,7 +1,6 @@
-import { AtSign, CreditCard, Globe, MapPin, Share2, Wallet } from "lucide-react"
+import { AtSign, CreditCard, Globe, Share2, Wallet } from "lucide-react"
 import { ACCEPTED_PAYMENTS_NOTE } from "@/lib/pix"
 import type { Store, PublicStoreSettings } from "@/lib/services/store"
-import { formatAddress } from "@/lib/utils/address"
 import { formatBRL } from "@/lib/utils/money"
 import { OpeningHoursDisclosure } from "@/components/public-menu/opening-hours-disclosure"
 
@@ -33,12 +32,8 @@ export function StoreInfoBlock({
           <h1 className="text-lg leading-tight font-semibold tracking-tight">
             {store.name}
           </h1>
-          {store.address ? (
-            <p className="text-muted-foreground flex items-start gap-1.5 text-xs leading-relaxed">
-              <MapPin className="mt-0.5 size-3.5 shrink-0" />
-              {formatAddress(store.address)}
-            </p>
-          ) : null}
+          {/* No address on the menu: customers turned up to collect before
+              their order was ready, so the store sends it on pickup orders. */}
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <Wallet className="size-3.5 shrink-0" />
             {settings && settings.min_order_cents > 0

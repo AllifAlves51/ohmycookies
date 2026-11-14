@@ -25,6 +25,10 @@ import { firstNameFromEmail } from "@/lib/utils/user"
 import { StatCard } from "@/components/admin/dashboard/stat-card"
 import { PaymentBreakdownChart } from "@/components/admin/dashboard/payment-breakdown-chart"
 import { TopProductsList } from "@/components/admin/dashboard/top-products-list"
+import {
+  ProductsSoldTable,
+  type ProductSalesRow,
+} from "@/components/admin/reports/products-sold-table"
 import { UserAvatar } from "@/components/admin/user-avatar"
 import { ReportPeriodSelect } from "@/components/admin/reports/report-period-select"
 import { ReportRevenueChart } from "@/components/admin/reports/report-revenue-chart"
@@ -107,6 +111,38 @@ export default async function RelatoriosPage({
       ? (productImageById.get(product.product_id) ?? null)
       : null,
   }))
+
+  // Every product: what sold in the period, plus active products that sold
+  // nothing (sales are grouped by the name stamped on the order item).
+  // Matching by id too keeps a product renamed after selling from also
+  // showing up as "sem vendas".
+  const soldNames = new Set((products ?? []).map((p) => p.product_name))
+  const soldIds = new Set((products ?? []).map((p) => p.product_id))
+  const productSalesRows: ProductSalesRow[] = [
+    ...(products ?? []).map((product) => ({
+      key: `sold:${product.product_name}`,
+      name: product.product_name,
+      imageUrl: product.product_id
+        ? (productImageById.get(product.product_id) ?? null)
+        : null,
+      quantity: product.quantity,
+      revenueCents: product.revenueCents,
+    })),
+    ...(allProducts ?? [])
+      .filter(
+        (product) =>
+          product.active &&
+          !soldIds.has(product.id) &&
+          !soldNames.has(product.name),
+      )
+      .map((product) => ({
+        key: `unsold:${product.id}`,
+        name: product.name,
+        imageUrl: product.image_url,
+        quantity: 0,
+        revenueCents: 0,
+      })),
+  ]
 
   const avatarUrl =
     typeof user.user_metadata?.avatar_url === "string"
@@ -202,6 +238,11 @@ export default async function RelatoriosPage({
           </CardContent>
         </Card>
       </div>
+
+      <ProductsSoldTable
+        rows={productSalesRows}
+        periodLabel={`${range.fromKey}_a_${range.toKey}`}
+      />
 
       <OrdersEvolutionChart data={ordersEvolution} />
     </main>

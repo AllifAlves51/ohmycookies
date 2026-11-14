@@ -125,13 +125,13 @@ function storeJsonLd(store: Store) {
     hasMenu: url,
     sameAs: sameAs.length ? sameAs : undefined,
     openingHoursSpecification: hours.length ? hours : undefined,
+    // City only, no street: the street brought customers to the door
+    // before their order was ready.
     address: store.address
       ? {
           "@type": "PostalAddress",
-          streetAddress: `${store.address.street}, ${store.address.number}`,
           addressLocality: store.address.city,
           addressRegion: store.address.state,
-          postalCode: store.address.zip,
           addressCountry: "BR",
         }
       : undefined,
