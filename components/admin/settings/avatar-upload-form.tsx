@@ -6,6 +6,7 @@ import {
   uploadAvatarAction,
   type SettingsActionState,
 } from "@/app/(admin)/configuracoes/actions"
+import { compressFormImage, IMAGE_PRESETS } from "@/lib/utils/compress-image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,7 +36,13 @@ export function AvatarUploadForm({
   avatarUrl: string | null
   initial: string
 }) {
-  const [state, formAction] = useActionState(uploadAvatarAction, initialState)
+  const [state, formAction] = useActionState(
+    async (prevState: SettingsActionState, formData: FormData) => {
+      await compressFormImage(formData, "avatar", IMAGE_PRESETS.avatar)
+      return uploadAvatarAction(prevState, formData)
+    },
+    initialState,
+  )
   const [preview, setPreview] = useState<string | null>(null)
 
   const src = preview ?? avatarUrl
@@ -58,7 +65,7 @@ export function AvatarUploadForm({
           </div>
           <form action={formAction} className="flex flex-1 items-center gap-4">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="avatar">Imagem (máx. 2MB)</Label>
+              <Label htmlFor="avatar">Imagem</Label>
               <Input
                 id="avatar"
                 name="avatar"

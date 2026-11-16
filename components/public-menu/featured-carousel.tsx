@@ -90,6 +90,8 @@ export function FeaturedCarousel({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={product.image_url ?? "/placeholder-image.svg"}
+                  loading="lazy"
+                  decoding="async"
                   alt=""
                   className="bg-muted aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                 />

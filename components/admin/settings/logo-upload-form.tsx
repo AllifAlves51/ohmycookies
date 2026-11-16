@@ -6,6 +6,7 @@ import {
   uploadLogoAction,
   type SettingsActionState,
 } from "@/app/(admin)/configuracoes/actions"
+import { compressFormImage, IMAGE_PRESETS } from "@/lib/utils/compress-image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,7 +30,13 @@ function SubmitButton() {
 }
 
 export function LogoUploadForm({ logoUrl }: { logoUrl: string | null }) {
-  const [state, formAction] = useActionState(uploadLogoAction, initialState)
+  const [state, formAction] = useActionState(
+    async (prevState: SettingsActionState, formData: FormData) => {
+      await compressFormImage(formData, "logo", IMAGE_PRESETS.logo)
+      return uploadLogoAction(prevState, formData)
+    },
+    initialState,
+  )
   const [preview, setPreview] = useState<string | null>(null)
 
   return (
@@ -49,7 +56,7 @@ export function LogoUploadForm({ logoUrl }: { logoUrl: string | null }) {
             />
           </div>
           <div className="flex-1 space-y-2">
-            <Label htmlFor="logo">Imagem (máx. 2MB)</Label>
+            <Label htmlFor="logo">Imagem</Label>
             <Input
               id="logo"
               name="logo"

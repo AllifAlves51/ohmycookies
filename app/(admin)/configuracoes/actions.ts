@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import {
   IMAGE_TYPE_ERROR,
+  IMMUTABLE_CACHE_CONTROL,
   imageExtension,
   isAllowedImage,
 } from "@/lib/utils/image-upload"
@@ -243,7 +244,11 @@ export async function uploadLogoAction(
 
   const { error: uploadError } = await supabase.storage
     .from("store-logos")
-    .upload(path, file, { upsert: true, contentType: file.type })
+    .upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+      cacheControl: IMMUTABLE_CACHE_CONTROL,
+    })
 
   if (uploadError) {
     return { error: "Não foi possível enviar a imagem. Tente novamente." }
@@ -304,7 +309,11 @@ export async function uploadAvatarAction(
 
   const { error: uploadError } = await supabase.storage
     .from("store-logos")
-    .upload(path, file, { upsert: true, contentType: file.type })
+    .upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+      cacheControl: IMMUTABLE_CACHE_CONTROL,
+    })
 
   if (uploadError) {
     return { error: "Não foi possível enviar a imagem. Tente novamente." }
@@ -357,7 +366,11 @@ export async function uploadLoginPhotoAction(
 
   const { error: uploadError } = await supabase.storage
     .from("store-logos")
-    .upload(path, file, { upsert: true, contentType: file.type })
+    .upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+      cacheControl: IMMUTABLE_CACHE_CONTROL,
+    })
 
   if (uploadError) {
     return { error: "Não foi possível enviar a imagem. Tente novamente." }

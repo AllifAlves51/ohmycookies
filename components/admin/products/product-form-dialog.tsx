@@ -9,6 +9,7 @@ import {
   type ProductActionState,
 } from "@/app/(admin)/produtos/actions"
 import type { Category, Product } from "@/lib/services/product"
+import { compressFormImage, IMAGE_PRESETS } from "@/lib/utils/compress-image"
 import { centsToReais } from "@/lib/utils/money"
 import { NO_CATEGORY_VALUE } from "@/lib/validations/product"
 import { Button } from "@/components/ui/button"
@@ -54,7 +55,13 @@ export function ProductFormDialog({
   trigger: React.ReactNode
 }) {
   const action = mode === "create" ? createProductAction : updateProductAction
-  const [state, formAction] = useActionState(action, initialState)
+  const [state, formAction] = useActionState(
+    async (prevState: ProductActionState, formData: FormData) => {
+      await compressFormImage(formData, "image", IMAGE_PRESETS.product)
+      return action(prevState, formData)
+    },
+    initialState,
+  )
   const [open, setOpen] = useState(false)
   const [stockControlEnabled, setStockControlEnabled] = useState(
     product?.stock_control_enabled ?? false,
@@ -192,7 +199,7 @@ export function ProductFormDialog({
                   {imagePreview ? "Trocar foto" : "Adicionar foto"}
                 </Button>
                 <p className="text-muted-foreground text-xs">
-                  Aparece no cardápio público. Máx. 4MB.
+                  Aparece no cardápio público.
                 </p>
               </div>
             </div>

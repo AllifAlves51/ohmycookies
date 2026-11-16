@@ -6,6 +6,7 @@ import {
   uploadLoginPhotoAction,
   type SettingsActionState,
 } from "@/app/(admin)/configuracoes/actions"
+import { compressFormImage, IMAGE_PRESETS } from "@/lib/utils/compress-image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,7 +35,10 @@ export function LoginPhotoForm({
   loginPhotoUrl: string | null
 }) {
   const [state, formAction] = useActionState(
-    uploadLoginPhotoAction,
+    async (prevState: SettingsActionState, formData: FormData) => {
+      await compressFormImage(formData, "loginPhoto", IMAGE_PRESETS.cover)
+      return uploadLoginPhotoAction(prevState, formData)
+    },
     initialState,
   )
   const [preview, setPreview] = useState<string | null>(null)
@@ -59,7 +63,7 @@ export function LoginPhotoForm({
           </div>
           <form action={formAction} className="flex flex-1 items-center gap-4">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="loginPhoto">Imagem (máx. 4MB)</Label>
+              <Label htmlFor="loginPhoto">Imagem</Label>
               <Input
                 id="loginPhoto"
                 name="loginPhoto"

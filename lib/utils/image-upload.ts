@@ -18,3 +18,7 @@ export function imageExtension(file: File) {
 }
 
 export const IMAGE_TYPE_ERROR = "Envie uma imagem JPG, PNG, WEBP, GIF ou AVIF"
+
+/** Every upload gets a fresh, timestamped path and is never overwritten, so
+ * browsers and the CDN can keep it for a year instead of the 1h default. */
+export const IMMUTABLE_CACHE_CONTROL = "31536000"

@@ -18,6 +18,8 @@ export function ProductCard({ product }: { product: Product }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={product.image_url ?? "/placeholder-image.svg"}
+        loading="lazy"
+        decoding="async"
         alt={product.name}
         className="bg-muted aspect-square w-full object-cover"
       />

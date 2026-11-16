@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import {
   IMAGE_TYPE_ERROR,
+  IMMUTABLE_CACHE_CONTROL,
   imageExtension,
   isAllowedImage,
 } from "@/lib/utils/image-upload"
@@ -69,7 +70,11 @@ async function uploadProductImage(
 
   const { error } = await supabase.storage
     .from("product-images")
-    .upload(path, file, { upsert: true, contentType: file.type })
+    .upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+      cacheControl: IMMUTABLE_CACHE_CONTROL,
+    })
 
   if (error) {
     return null
